@@ -48,24 +48,31 @@ var GameTail = class {
 
 // src/engine/GameCamera.ts
 var GameCamera = class extends GameTail {
-  fill = { style: "transparent" };
+  isFixedPosition = false;
+  effectCtx;
+  constructor() {
+    super();
+    this.image = new OffscreenCanvas(256, 256);
+    this.effectCtx = this.image.getContext("2d");
+  }
   update(ctx) {
     const { width, height } = ctx.canvas.getScreenSize();
     this.width = width;
     this.height = height;
+    const idata = this.effectCtx.createImageData(width, height);
+    const buffer32 = new Uint32Array(idata.data.buffer);
+    for (let i = 0; i < buffer32.length; i++) {
+      buffer32[i] = (255 * Math.random() | 0) << 24 & 1099780128868;
+    }
+    this.effectCtx.putImageData(idata, 0, 0);
+    const gradient = this.effectCtx.createRadialGradient(256 / 2, 256 / 2, 256 / 4, 256 / 2, 256 / 2, 256);
+    gradient.addColorStop(0, "transparent");
+    gradient.addColorStop(1, "black");
+    this.effectCtx.fillStyle = gradient;
+    this.effectCtx.fillRect(0, 0, width, height);
   }
   isVisible(tail) {
     return !(tail.x + tail.width < this.x || tail.x > this.x + this.width || tail.y + tail.height < this.y || tail.y > this.y + this.height);
-  }
-  draw(ctx) {
-    ctx.canvas.drawRectangle({
-      x: 0,
-      y: 0,
-      width: this.width,
-      height: this.height,
-      fill: this.fill
-    });
-    this.drawChild(ctx);
   }
 };
 
@@ -211,7 +218,7 @@ var GameLoop = class {
       tail.update(this.ctx);
     });
     this.onFrameHandler(this.ctx);
-    if (this.ctx.frameDuration > 60) {
+    if (this.ctx.frameDuration > 34) {
       console.warn("onFrame executing is too long");
     }
     this.draw();
@@ -224,6 +231,7 @@ var GameLoop = class {
     this.tails.forEach((tail) => {
       tail.draw(this.ctx);
     });
+    this.ctx.camera.draw(this.ctx);
   }
 };
 

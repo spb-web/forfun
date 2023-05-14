@@ -51,5 +51,7 @@ export class GameLoop {
     this.tails.forEach((tail) => {
       tail.draw(this.ctx)
     })
+
+    this.ctx.camera.draw(this.ctx)
   }
 }
