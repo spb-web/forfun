@@ -1,0 +1,14 @@
+{
+  "name": "game",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "esbuild --bundle ./src/index.ts --format=esm --outdir=./dist --platform=node --target=esnext --color=true"
+  },
+  "devDependencies": {
+    "esbuild": "0.17.19",
+    "ts-node": "10.9.1",
+    "typescript": "5.0.4"
+  }
+}
