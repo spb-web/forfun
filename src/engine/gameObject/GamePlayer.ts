@@ -10,7 +10,7 @@ export class GamePlayer extends GameUnit {
   width = 50
   height = 50
   x = 100
-  y = 100
+  y = 80
   image = document.createElement('img')
   playerState: PlayerState = PlayerState.idle
 

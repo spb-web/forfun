@@ -2,14 +2,16 @@ import { GameContext } from "./GameContext";
 import { GameWall } from "./GameWall";
 import { GameTail } from "./GameTail";
 import { GameUnit } from "./gameObject/GameUnit";
+import { GameFloor } from "./gameObject/GameFloor";
 
 export class GameMap extends GameTail {
-  protected map: (GameWall|undefined)[][] = []
+  protected map: (GameWall|GameFloor)[][] = []
   protected walls: GameWall[] = []
+  protected floors: GameFloor[] = []
   protected units: GameTail[] = []
   private gridSize = 32
 
-  constructor(map: (GameWall|undefined)[][] = []) {
+  constructor(map: (GameWall|GameFloor)[][] = []) {
     super()
 
     this.map = map
@@ -21,9 +23,6 @@ export class GameMap extends GameTail {
       maxX = Math.max(maxX, row.length)
 
       row.forEach((tail, y) => {
-        if (!tail) {
-          return
-        }
 
         tail.x = x * this.gridSize
         tail.y = y * this.gridSize
@@ -31,7 +30,12 @@ export class GameMap extends GameTail {
         tail.height = this.gridSize
 
         this.addChild(tail)
-        this.walls.push(tail)
+
+        if (tail instanceof GameFloor) {
+          this.floors.push(tail)
+        } else if (tail instanceof GameWall) {
+          this.walls.push(tail)
+        }
       }) 
     })
 
@@ -44,12 +48,29 @@ export class GameMap extends GameTail {
     this.units.push(unit)
   }
 
-  public isFloor(x: number, y: number): boolean {
-    const gridX = Math.ceil(x / this.gridSize)
-    const gridY = Math.ceil(y / this.gridSize)
-    const cell = this.map[gridX][gridY]
+  public isFloor(x: number, y: number, width: number, height: number): boolean {
+    const gridX1 = Math.floor(x / this.gridSize) 
+    const gridY1 = Math.floor(y / this.gridSize)
+    const gridX2 = Math.floor((x + width) / this.gridSize)
+    const gridY2 = Math.floor((y + height) / this.gridSize)
 
-    return !(cell instanceof GameWall)
+    for (let gridXIndex = gridX1; gridXIndex <= gridX2; gridXIndex++) {
+      const cellsRow = this.map?.[gridXIndex]
+
+      if (!cellsRow) {
+        return false
+      }
+
+      for (let gridYIndex = gridY1; gridYIndex <= gridY2; gridYIndex++) {
+        const cell = cellsRow[gridYIndex]
+
+        if (!(cell instanceof GameFloor)) {
+          return false
+        }
+      }
+    }
+
+    return true
   }
 
   public draw(ctx: GameContext) {
@@ -57,6 +78,7 @@ export class GameMap extends GameTail {
   }
 
   protected drawChild(ctx: GameContext) {
+    this.floors.forEach(tail => tail.draw(ctx))
     this.units.forEach(tail => tail.draw(ctx))
     this.walls.forEach(tail => tail.draw(ctx))
   }
