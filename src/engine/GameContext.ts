@@ -1,11 +1,14 @@
 import { GameCamera } from "./GameCamera";
 import { GameCanvas2d } from "./GameCanvas2d";
 import { GameKeyboard } from "./GameKeyboard";
+import { GameCollider } from "./gameObject/GameCollider";
 
 export class GameContext {
   public readonly keyboard = new GameKeyboard()
   public readonly canvas = new GameCanvas2d()
   public readonly camera = new GameCamera()
+
+  public readonly colliders: GameCollider[] = []
 
   private readonly frame = {
     time: Date.now(),

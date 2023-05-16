@@ -20,16 +20,14 @@ export class GamePlayer extends GameUnit {
   }
 
   public update(ctx: GameContext): void {
-    const vector = ctx.keyboard.vector
-    // скорость 100px в секунду при любом fps
+    // скорость 400px в секунду при любом fps
     const speedPerSecond = 400
-    const speedPerFrame = speedPerSecond * ctx.frameDuration / 1000
-
-    this.moveTo(
-      this.x + vector[0] * speedPerFrame,
-      this.y + vector[1] * speedPerFrame,
-    )
+    this.velocity = ctx.keyboard.vector.normalize(speedPerSecond)
 
     this.fill = {style: `hsl(300, 100%, 31%)`}
+
+
+
+    this.updatePosition()
   }
 }

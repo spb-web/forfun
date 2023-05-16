@@ -7,8 +7,18 @@ var GameTail = class {
   fill = void 0;
   image = void 0;
   isFixedPosition = false;
+  ctx;
   parent = null;
   child = [];
+  get centerX() {
+    return this.x + this.width / 2;
+  }
+  get centerY() {
+    return this.y + this.height / 2;
+  }
+  setContext(ctx) {
+    this.ctx = ctx;
+  }
   setParent(tail) {
     this.parent = tail;
   }
@@ -130,6 +140,71 @@ var GameCanvas2d = class {
   }
 };
 
+// src/engine/vector/Vec2.ts
+var Vec2 = class {
+  x;
+  y;
+  magnitude;
+  constructor(x = 0, y = 0) {
+    this.x = x;
+    this.y = y;
+    this.magnitude = Math.sqrt(this.x ** 2 + this.y ** 2);
+  }
+  /**
+   * Возвращает вектор с заданной длинной
+   * При нормализации вектор сохраняет то же направление, но его длина равна newMagnitude
+   * @see https://docs.unity3d.com/ru/530/ScriptReference/Vector2-normalized.html
+   *
+   * @returns Возвращает новый вектор
+   */
+  normalize(newMagnitude = 1) {
+    const { magnitude } = this;
+    if (magnitude > 0) {
+      return this.multiplyByScalar(newMagnitude / magnitude);
+    }
+    return this.clone();
+  }
+  /**
+   * Вычитает из текущего вектора переданный вектор
+   * 
+   * @returns Возвращает новый вектор
+   */
+  subtract(subtrahend) {
+    return Vec2.create(
+      this.x - subtrahend.x,
+      this.y - subtrahend.y
+    );
+  }
+  setX(x) {
+    return Vec2.create(x, this.y);
+  }
+  setY(y) {
+    return Vec2.create(this.x, y);
+  }
+  mul(v) {
+    return Vec2.create(this.x * v.x, this.y * v.y);
+  }
+  /**
+   * Скалярное произведение
+   * @see https://en.wikipedia.org/wiki/Dot_product
+   */
+  dotProduct(factor) {
+    return this.x * factor.x + this.y * factor.y;
+  }
+  multiplyByScalar(scalar) {
+    return Vec2.create(this.x * scalar, this.y * scalar);
+  }
+  divideByScalar(scalar) {
+    return Vec2.create(this.x / scalar, this.y / scalar);
+  }
+  clone() {
+    return Vec2.create(this.x, this.y);
+  }
+  static create(x = 0, y = 0) {
+    return new Vec2(x, y);
+  }
+};
+
 // src/engine/GameKeyboard.ts
 var GameKeyboard = class {
   active = {};
@@ -142,24 +217,21 @@ var GameKeyboard = class {
   }
   // единичный вектор направления движения
   get vector() {
-    const vector = [0, 0];
+    let x = 0;
+    let y = 0;
     if (this.isActive("KeyW") || this.isActive("ArrowUp")) {
-      vector[1] -= 1;
+      y -= 1;
     }
     if (this.isActive("KeyS") || this.isActive("ArrowDown")) {
-      vector[1] += 1;
+      y += 1;
     }
     if (this.isActive("KeyA") || this.isActive("ArrowLeft")) {
-      vector[0] -= 1;
+      x -= 1;
     }
     if (this.isActive("KeyD") || this.isActive("ArrowRight")) {
-      vector[0] += 1;
+      x += 1;
     }
-    const vectorLength = Math.sqrt(vector[0] ** 2 + vector[1] ** 2);
-    if (vectorLength > 0) {
-      vector[0] = vector[0] / vectorLength;
-      vector[1] = vector[1] / vectorLength;
-    }
+    const vector = Vec2.create(x, y).normalize();
     return vector;
   }
   handleKeydown = (event) => {
@@ -175,6 +247,7 @@ var GameContext = class {
   keyboard = new GameKeyboard();
   canvas = new GameCanvas2d();
   camera = new GameCamera();
+  colliders = [];
   frame = {
     time: Date.now(),
     duration: 0
@@ -200,7 +273,12 @@ var GameLoop = class {
   isStarted = false;
   tails = [];
   addTiles(...tails) {
+    tails.forEach((tail) => this.bindCtx(tail));
     return this.tails.push(...tails);
+  }
+  bindCtx(tail) {
+    tail.setContext(this.ctx);
+    tail.child.forEach((children) => this.bindCtx(children));
   }
   start() {
     if (this.isStarted) {
@@ -235,8 +313,85 @@ var GameLoop = class {
   }
 };
 
-// src/engine/GameWall.ts
-var GameWall = class extends GameTail {
+// src/engine/gameObject/GameCollider.ts
+var e = document.createElement("div");
+document.body.appendChild(e);
+e.style.position = "absolute";
+e.style.left = "0";
+e.style.top = "0";
+e.style.zIndex = "10";
+var logger = (s) => e.innerHTML = s;
+var GameCollider = class extends GameTail {
+  collided = false;
+  /**
+   * Вектор ускорения объекта
+   */
+  velocity = Vec2.create();
+  collisionVelocity = Vec2.create();
+  setContext(ctx) {
+    this.ctx = ctx;
+    ctx.colliders.push(this);
+  }
+  get axisAlignedBoundingBox() {
+    const { x, y, width, height } = this;
+    return {
+      min: new Vec2(x, y),
+      max: new Vec2(width + x, height + y)
+    };
+  }
+  /**
+   * Определение пересечений по теореме о разделяющей оси
+   * @see https://gamedevelopment.tutsplus.com/tutorials/collision-detection-using-the-separating-axis-theorem--gamedev-169
+   */
+  checkCollided(newX, newY, second) {
+    const firstAABB = {
+      min: Vec2.create(newX, newY),
+      max: Vec2.create(newX + this.width, newY + this.height)
+    };
+    const secondAABB = second.axisAlignedBoundingBox;
+    const isCollided = !// x
+    (firstAABB.max.x < secondAABB.min.x || firstAABB.min.x > secondAABB.max.x || (firstAABB.max.y < secondAABB.min.y || firstAABB.min.y > secondAABB.max.y));
+    return isCollided;
+  }
+  updatePosition() {
+    let newX = this.x;
+    let newY = this.y;
+    const speedPerFrame = this.ctx.frameDuration / 1e3;
+    newX = this.x + this.velocity.x * speedPerFrame;
+    newY = this.y + this.velocity.y * speedPerFrame;
+    this.x = newX;
+    this.y = newY;
+    this.checkCollision();
+  }
+  checkCollision() {
+    this.collided = false;
+    for (const collider of this.ctx.colliders) {
+      if (collider === this) {
+        continue;
+      }
+      const d = Vec2.create(this.centerX - collider.centerX, this.centerY - collider.centerY);
+      const intersectionWidth = (this.width + collider.width) / 2 - Math.abs(d.x);
+      const intersectionHeight = (this.height + collider.height) / 2 - Math.abs(d.y);
+      if (intersectionWidth > 0 && intersectionHeight > 0) {
+        this.collided = true;
+        const overlapX = intersectionWidth * Math.sign(d.x);
+        const overlapY = intersectionHeight * Math.sign(d.y);
+        if (overlapY !== 0)
+          logger([overlapY]);
+        if (Math.abs(overlapX) < Math.abs(overlapY)) {
+          this.x += overlapX;
+          this.collisionVelocity.setX(-this.velocity.x);
+        } else {
+          this.y += overlapY;
+          this.collisionVelocity.setY(-this.velocity.x);
+        }
+      }
+    }
+  }
+};
+
+// src/engine/gameObject/GameWall.ts
+var GameWall = class extends GameCollider {
   image = document.createElement("img");
   constructor() {
     super();
@@ -287,25 +442,6 @@ var GameMap = class extends GameTail {
     this.addChild(unit);
     this.units.push(unit);
   }
-  isFloor(x, y, width, height) {
-    const gridX1 = Math.floor(x / this.gridSize);
-    const gridY1 = Math.floor(y / this.gridSize);
-    const gridX2 = Math.floor((x + width) / this.gridSize);
-    const gridY2 = Math.floor((y + height) / this.gridSize);
-    for (let gridXIndex = gridX1; gridXIndex <= gridX2; gridXIndex++) {
-      const cellsRow = this.map?.[gridXIndex];
-      if (!cellsRow) {
-        return false;
-      }
-      for (let gridYIndex = gridY1; gridYIndex <= gridY2; gridYIndex++) {
-        const cell = cellsRow[gridYIndex];
-        if (!(cell instanceof GameFloor)) {
-          return false;
-        }
-      }
-    }
-    return true;
-  }
   draw(ctx) {
     this.drawChild(ctx);
   }
@@ -317,17 +453,9 @@ var GameMap = class extends GameTail {
 };
 
 // src/engine/gameObject/GameUnit.ts
-var GameUnit = class extends GameTail {
+var GameUnit = class extends GameCollider {
   x = 190;
   y = 190;
-  moveTo(x, y) {
-    if (this.parent.isFloor(x, y, this.width, this.height)) {
-      this.x = x;
-      this.y = y;
-      return true;
-    }
-    return false;
-  }
 };
 
 // src/engine/gameObject/GamePlayer.ts
@@ -343,14 +471,10 @@ var GamePlayer = class extends GameUnit {
     this.image.src = "./sprite0.png";
   }
   update(ctx) {
-    const vector = ctx.keyboard.vector;
     const speedPerSecond = 400;
-    const speedPerFrame = speedPerSecond * ctx.frameDuration / 1e3;
-    this.moveTo(
-      this.x + vector[0] * speedPerFrame,
-      this.y + vector[1] * speedPerFrame
-    );
+    this.velocity = ctx.keyboard.vector.normalize(speedPerSecond);
     this.fill = { style: `hsl(300, 100%, 31%)` };
+    this.updatePosition();
   }
 };
 
@@ -392,8 +516,7 @@ function assert(v) {
   }
 }
 var DemoBot = class extends GameUnit {
-  vx = Math.random() * 50 - 25;
-  vy = Math.random() * 50 - 25;
+  velocity = Vec2.create(Math.random() * 800 - 400, Math.random() * 800 - 400);
   fill = void 0;
   image = document.createElement("img");
   constructor() {
@@ -406,10 +529,9 @@ var DemoBot = class extends GameUnit {
     assert(parent);
     this.width = 50;
     this.height = 50;
-    const isMoved = this.moveTo(this.x + this.vx, this.y + this.vy);
-    if (!isMoved) {
-      this.vx = Math.random() * 50 - 25;
-      this.vy = Math.random() * 50 - 25;
+    this.updatePosition();
+    if (this.collided) {
+      this.velocity = Vec2.create(Math.random() * 800 - 400, Math.random() * 800 - 400);
     }
   }
 };
@@ -454,9 +576,13 @@ var map = new GameMap([
 ]);
 var demoBot = new DemoBot();
 var demoBot2 = new DemoBot();
+var demoBot3 = new DemoBot();
+var demoBot4 = new DemoBot();
 var player = new GamePlayer();
 map.addUnit(demoBot);
 map.addUnit(demoBot2);
+map.addUnit(demoBot3);
+map.addUnit(demoBot4);
 map.addUnit(player);
 gameLoop.addTiles(bgTail, map);
 gameLoop.onFrameHandler = (ctx) => {

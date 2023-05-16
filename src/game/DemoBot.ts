@@ -1,5 +1,6 @@
 import type { GameContext } from "../engine/GameContext";
 import { GameUnit } from "../engine/gameObject/GameUnit";
+import { Vec2 } from "../engine/vector/Vec2";
 
 function assert<T>(v: T): asserts v is NonNullable<T> {
   if (!v) {
@@ -8,8 +9,7 @@ function assert<T>(v: T): asserts v is NonNullable<T> {
 }
 
 export class DemoBot extends GameUnit {
-  vx = Math.random() * 50 - 25
-  vy = Math.random() * 50 - 25
+  public velocity: Vec2 = Vec2.create(Math.random() * 800 - 400, Math.random() * 800 - 400)
 
   fill = undefined
 
@@ -31,11 +31,10 @@ export class DemoBot extends GameUnit {
     this.width = 50;
     this.height = 50;
 
-    const isMoved = this.moveTo(this.x + this.vx, this.y + this.vy)
+    this.updatePosition()
 
-    if (!isMoved) {
-      this.vx = Math.random() * 50 - 25
-      this.vy = Math.random() * 50 - 25
+    if (this.collided) {
+      this.velocity = Vec2.create(Math.random() * 800 - 400, Math.random() * 800 - 400)
     }
   }
 }

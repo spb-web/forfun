@@ -9,7 +9,13 @@ export class GameLoop {
   private tails: GameTail[] = []
 
   public addTiles(...tails: GameTail[]) {
+    tails.forEach(tail => this.bindCtx(tail))
     return this.tails.push(...tails)
+  }
+
+  bindCtx(tail: GameTail) {
+    tail.setContext(this.ctx)
+    tail.child.forEach(children => this.bindCtx(children))
   }
 
   public start() {

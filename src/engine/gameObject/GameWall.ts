@@ -1,6 +1,6 @@
-import { GameTail } from "./GameTail"
+import { GameCollider } from "./GameCollider"
 
-export class GameWall extends GameTail {
+export class GameWall extends GameCollider {
   image = document.createElement('img')
 
   constructor() {

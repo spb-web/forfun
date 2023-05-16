@@ -2,7 +2,7 @@ import { GameLoop } from "./engine/GameLoop";
 import { GameMap } from "./engine/GameMap";
 import { GameFloor } from "./engine/gameObject/GameFloor";
 import { GamePlayer } from "./engine/gameObject/GamePlayer";
-import { GameWall } from "./engine/GameWall";
+import { GameWall } from "./engine/gameObject/GameWall";
 import { BgTail } from "./game/BgTail";
 import { DemoBot } from "./game/DemoBot";
 
@@ -53,11 +53,17 @@ const map = new GameMap([
 const demoBot = new DemoBot()
 // типо бот2
 const demoBot2 = new DemoBot()
+// типо бот3
+const demoBot3 = new DemoBot()
+// типо бот4
+const demoBot4 = new DemoBot()
 // типо игрок
 const player = new GamePlayer()
 
 map.addUnit(demoBot)
 map.addUnit(demoBot2)
+map.addUnit(demoBot3)
+map.addUnit(demoBot4)
 map.addUnit(player)
 
 // добавляем bgTail в цикл отрисовки

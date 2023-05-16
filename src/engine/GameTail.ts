@@ -1,4 +1,5 @@
 import type { GameContext } from "./GameContext";
+import { GameCollider } from "./gameObject/GameCollider";
 
 export class GameTail {
   x: number = 0
@@ -8,17 +9,31 @@ export class GameTail {
   fill: {style: any} | undefined = undefined
   image?: CanvasImageSource | undefined = undefined
   isFixedPosition = false
-
+  ctx!: GameContext
+  
   parent: GameTail | null = null
+  
+  public child: GameTail[] = []
+  
+  get centerX(): number {
+    return this.x + (this.width / 2)
+  }
 
-  protected child: GameTail[] = []
+  get centerY(): number {
+    return this.y + (this.height / 2)
+  }
 
+  public setContext(ctx: GameContext) {
+    this.ctx = ctx
+  }
+  
   public setParent(tail: GameTail) {
     this.parent = tail
   }
 
   public addChild(...child: GameTail[]) {
     child.forEach(tail => tail.setParent(this))
+    
     return this.child.push(...child)
   }
 
