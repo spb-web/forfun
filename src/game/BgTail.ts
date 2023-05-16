@@ -3,10 +3,6 @@ import { GameTail } from "../engine/GameTail";
 import { GameTween } from "../engine/GameTween";
 
 export class BgTail extends GameTail {
-  x = 0
-  y = 0
-  width = 10
-  height = 10
   gameTween = new GameTween()
   isFixedPosition = true
 
@@ -14,8 +10,10 @@ export class BgTail extends GameTail {
     super.update(ctx)
 
     const {width, height} = ctx.canvas.getScreenSize()
-    this.width = width
-    this.height = height
+
+    this
+      .setWidth(width)
+      .setHeight(height)
   
     this.fill = {style: `hsl(${this.gameTween.calc(ctx.time)}, 100%, 31%)`}
   }

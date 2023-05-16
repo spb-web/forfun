@@ -1,11 +1,7 @@
 import type { GameContext } from "./GameContext";
-import { GameCollider } from "./gameObject/GameCollider";
+import { Box } from "./Box";
 
-export class GameTail {
-  x: number = 0
-  y: number = 0
-  width: number = 0
-  height: number = 0
+export class GameTail extends Box {
   fill: {style: any} | undefined = undefined
   image?: CanvasImageSource | undefined = undefined
   isFixedPosition = false
@@ -14,14 +10,6 @@ export class GameTail {
   parent: GameTail | null = null
   
   public child: GameTail[] = []
-  
-  get centerX(): number {
-    return this.x + (this.width / 2)
-  }
-
-  get centerY(): number {
-    return this.y + (this.height / 2)
-  }
 
   public setContext(ctx: GameContext) {
     this.ctx = ctx

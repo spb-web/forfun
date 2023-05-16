@@ -18,6 +18,10 @@ export class DemoBot extends GameUnit {
   constructor() {
     super()
     this.image.src = './sprite0.png'
+
+    this
+      .setWidth(50)
+      .setHeight(50)
   }
     
   update(ctx: GameContext): void {
@@ -27,9 +31,6 @@ export class DemoBot extends GameUnit {
     this.image.src = `./sprite${Math.ceil(ctx.time / 1000) % 3}.png`
 
     assert(parent)
-  
-    this.width = 50;
-    this.height = 50;
 
     this.updatePosition()
 

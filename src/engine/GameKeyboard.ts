@@ -1,3 +1,4 @@
+import { ReadonlyVec2 } from "./vector/ReadonlyVec2"
 import { Vec2 } from "./vector/Vec2"
 
 export class GameKeyboard {
@@ -13,7 +14,7 @@ export class GameKeyboard {
   }
 
   // единичный вектор направления движения
-  get vector(): Vec2 {
+  get vector(): ReadonlyVec2 {
     let x = 0
     let y = 0
 
@@ -33,7 +34,11 @@ export class GameKeyboard {
       x += 1
     }
 
-    const vector: Vec2 = Vec2.create(x, y).normalize()
+    const vector: ReadonlyVec2 = ReadonlyVec2.fromVec2(
+      Vec2
+        .create(x, y)
+        .normalize()
+    )
 
     return vector
   }

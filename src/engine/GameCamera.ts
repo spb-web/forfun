@@ -15,8 +15,10 @@ export class GameCamera extends GameTail {
 
   update(ctx: GameContext): void {
     const {width, height} = ctx.canvas.getScreenSize()
-    this.width = width
-    this.height = height
+    
+    this
+      .setWidth(width)
+      .setHeight(height)
 
     const idata = this.effectCtx.createImageData(width, height)
 

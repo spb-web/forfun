@@ -24,10 +24,11 @@ export class GameMap extends GameTail {
 
       row.forEach((tail, y) => {
 
-        tail.x = x * this.gridSize
-        tail.y = y * this.gridSize
-        tail.width = this.gridSize
-        tail.height = this.gridSize
+        tail
+          .setX(x * this.gridSize)
+          .setY(y * this.gridSize)
+          .setWidth(this.gridSize)
+          .setHeight(this.gridSize)
 
         this.addChild(tail)
 
@@ -39,8 +40,9 @@ export class GameMap extends GameTail {
       }) 
     })
 
-    this.width = maxX * this.gridSize
-    this.height = maxY * this.gridSize
+    this
+      .setWidth(maxX * this.gridSize)
+      .setHeight(maxY * this.gridSize)
   }
 
   public addUnit(unit: GameUnit) {

@@ -2,14 +2,6 @@ import { GameContext } from "../GameContext";
 import { GameTail } from "../GameTail";
 import { Vec2 } from "../vector/Vec2";
 
-const e = document.createElement('div')
-document.body.appendChild(e)
-e.style.position='absolute'
-e.style.left='0'
-e.style.top='0'
-e.style.zIndex='10'
-const logger = (s: any) => e.innerHTML = s
-
 export class GameCollider extends GameTail {
   collided = false
   /**
@@ -25,34 +17,25 @@ export class GameCollider extends GameTail {
     ctx.colliders.push(this)
   }
 
-  get axisAlignedBoundingBox() {
-    const {x, y, width, height} = this
+  // /**
+  //  * Определение пересечений по теореме о разделяющей оси
+  //  * @see https://gamedevelopment.tutsplus.com/tutorials/collision-detection-using-the-separating-axis-theorem--gamedev-169
+  //  */
+  // public checkCollided(newX: number, newY: number, second: GameCollider): boolean {
+  //   const firstAABB = {
+  //     min: Vec2.create(newX, newY),
+  //     max: Vec2.create(newX + this.width, newY + this.height)
+  //   }
+  //   const secondAABB = second.axisAlignedBoundingBox
+  //   const isCollided = !(
+  //     // x
+  //     (firstAABB.max.x < secondAABB.min.x || firstAABB.min.x > secondAABB.max.x)
+  //     // y
+  //     || (firstAABB.max.y < secondAABB.min.y || firstAABB.min.y > secondAABB.max.y)
+  //   )
 
-    return {
-      min: new Vec2(x, y),
-      max: new Vec2(width + x, height + y),
-    }
-  }
-
-  /**
-   * Определение пересечений по теореме о разделяющей оси
-   * @see https://gamedevelopment.tutsplus.com/tutorials/collision-detection-using-the-separating-axis-theorem--gamedev-169
-   */
-  public checkCollided(newX: number, newY: number, second: GameCollider): boolean {
-    const firstAABB = {
-      min: Vec2.create(newX, newY),
-      max: Vec2.create(newX + this.width, newY + this.height)
-    }
-    const secondAABB = second.axisAlignedBoundingBox
-    const isCollided = !(
-      // x
-      (firstAABB.max.x < secondAABB.min.x || firstAABB.min.x > secondAABB.max.x)
-      // y
-      || (firstAABB.max.y < secondAABB.min.y || firstAABB.min.y > secondAABB.max.y)
-    )
-
-    return isCollided
-  }
+  //   return isCollided
+  // }
 
   updatePosition() {
     // Check collisions with objects
@@ -64,10 +47,10 @@ export class GameCollider extends GameTail {
     newY = this.y + this.velocity.y * speedPerFrame
 
     // Update player's position
-    this.x = newX;
-    this.y = newY;
-
-    this.checkCollision()
+    this
+      .setX(newX)
+      .setY(newY)
+      .checkCollision()
   }
 
   checkCollision(): void {
@@ -77,7 +60,7 @@ export class GameCollider extends GameTail {
         continue
       }
       // Обнаружено столкновение
-      const d = Vec2.create(this.centerX - collider.centerX, this.centerY - collider.centerY)
+      const d = Vec2.fromReadonlyVec2(this.center).subtract(collider.center)
 
       const intersectionWidth = (this.width + collider.width) / 2 - Math.abs(d.x);
       const intersectionHeight = (this.height + collider.height) / 2 - Math.abs(d.y);
@@ -89,16 +72,13 @@ export class GameCollider extends GameTail {
         const overlapX = intersectionWidth * Math.sign(d.x);
         const overlapY = intersectionHeight * Math.sign(d.y);
 
-        if (overlapY !== 0)
-        logger([overlapY])
-
         // Применение коррекции позиции игрока
         if (Math.abs(overlapX) < Math.abs(overlapY)) {
-          this.x += overlapX;
-          this.collisionVelocity.setX(-this.velocity.x)
+          this.setX(this.x + overlapX)
+          // this.collisionVelocity.setX(-this.velocity.x)
         } else {
-          this.y += overlapY;
-          this.collisionVelocity.setY(-this.velocity.x)
+          this.setY(this.y + overlapY)
+          // this.collisionVelocity.setY(-this.velocity.x)
         }
       }
     }

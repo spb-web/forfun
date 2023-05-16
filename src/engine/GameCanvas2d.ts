@@ -1,3 +1,5 @@
+import { Box } from "./Box"
+
 const assertReturn = <T>(v: T, message = 'value is nil'): NonNullable<T> => {
   if (!v) {
     throw new Error(message)
@@ -23,7 +25,7 @@ type RectangleData = Rectangle & {
   image?: CanvasImageSource | undefined
 }
 
-export class GameCanvas2d {
+export class GameCanvas2d extends Box {
   private canvas = document.createElement('canvas')
   private ctx2d = assertReturn(this.canvas.getContext('2d'), 'can not create 2d context')
 
@@ -46,9 +48,20 @@ export class GameCanvas2d {
     return this.canvas.height
   }
 
-  public resize(w: number, h: number) {
-    this.canvas.width = w
-    this.canvas.height = h
+  public setWidth(width: number): this {
+    super.setWidth(width)
+
+    this.canvas.width = width
+
+    return this
+  }
+
+  public setHeight(height: number): this {
+    super.setHeight(height)
+
+    this.canvas.height = height
+
+    return this
   }
 
   public clear() {

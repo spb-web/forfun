@@ -1,21 +1,193 @@
+// src/engine/vector/ReadonlyVec2.ts
+var ReadonlyVec2 = class {
+  vector = [0, 0];
+  constructor(x = 0, y = 0) {
+    this.vector[0] = x;
+    this.vector[1] = y;
+  }
+  /**
+   * Первая компонента вектора (x)
+   */
+  get x() {
+    return this.vector[0];
+  }
+  /**
+   * Вторая компонента вектора (y)
+   */
+  get y() {
+    return this.vector[1];
+  }
+  /**
+   * Длинна вектора
+   */
+  get magnitude() {
+    return Math.sqrt(this.x ** 2 + this.y ** 2);
+  }
+  /**
+   * Cоздает копию вектора
+   */
+  clone() {
+    return ReadonlyVec2.create(this.x, this.y);
+  }
+  static create(x = 0, y = 0) {
+    return new ReadonlyVec2(x, y);
+  }
+  /**
+   * Создает новый readonly вектор из Vec2
+   * 
+   * @see Vec2
+   */
+  static fromVec2(vector) {
+    return ReadonlyVec2.create(vector.x, vector.y);
+  }
+};
+
+// src/engine/vector/Vec2.ts
+var Vec2 = class extends ReadonlyVec2 {
+  constructor(x = 0, y = 0) {
+    super(x, y);
+  }
+  /**
+   * Установка первой компоненты вектора (x)
+   */
+  setX(x) {
+    this.vector[0] = x;
+    return this;
+  }
+  /**
+   * Установка второй компоненты вектора (y)
+   */
+  setY(y) {
+    this.vector[1] = y;
+    return this;
+  }
+  /**
+   * Возвращает вектор с заданной длинной
+   * При нормализации вектор сохраняет то же направление, но его длина равна newMagnitude
+   * @see https://docs.unity3d.com/ru/530/ScriptReference/Vector2-normalized.html
+   */
+  normalize(newMagnitude = 1) {
+    const { magnitude } = this;
+    if (magnitude > 0) {
+      return this.multiplyByScalar(newMagnitude / magnitude);
+    }
+    return this;
+  }
+  /**
+   * Вычитает из текущего вектора переданный вектор
+   */
+  subtract(subtrahend) {
+    return this.setX(this.x - subtrahend.x).setY(this.y - subtrahend.y);
+  }
+  /**
+   * Умножает вектор на переданный вектор
+   */
+  mul(vector) {
+    return this.setX(this.x * vector.x).setY(this.y * vector.y);
+  }
+  /**
+   * Складывет вектор с переданным вектором
+   */
+  add(vector) {
+    return this.setX(this.x + vector.x).setY(this.y + vector.y);
+  }
+  /**
+   * Скалярное произведение
+   * @see https://en.wikipedia.org/wiki/Dot_product
+   */
+  dotProduct(factor) {
+    return this.x * factor.x + this.y * factor.y;
+  }
+  /**
+   * Умножает вектор на скаляр
+   */
+  multiplyByScalar(scalar) {
+    return this.setX(this.x * scalar).setY(this.y * scalar);
+  }
+  /**
+   * Делит вектор на скаляр
+   */
+  divideByScalar(scalar) {
+    return this.setX(this.x / scalar).setY(this.y / scalar);
+  }
+  /**
+   * Cоздает копию вектора
+   */
+  clone() {
+    return Vec2.create(this.x, this.y);
+  }
+  /**
+   * Создает новый вектор
+   */
+  static create(x = 0, y = 0) {
+    return new Vec2(x, y);
+  }
+  /**
+   * Создает новый вектор из ReadonlyVec2
+   * @see ReadonlyVec2
+   */
+  static fromReadonlyVec2(vector) {
+    return Vec2.create(vector.x, vector.y);
+  }
+};
+
+// src/engine/Box.ts
+var Box = class {
+  /**
+   * Левая верхняя точка
+   */
+  min = Vec2.create();
+  /**
+  * Правая нижняя точка
+  */
+  max = Vec2.create();
+  get x() {
+    return this.min.x;
+  }
+  get y() {
+    return this.min.y;
+  }
+  get width() {
+    return this.max.x - this.min.x;
+  }
+  get height() {
+    return this.max.y - this.min.y;
+  }
+  setX(x) {
+    const { width } = this;
+    this.min.setX(x);
+    this.max.setX(x + width);
+    return this;
+  }
+  setY(y) {
+    const { height } = this;
+    this.min.setY(y);
+    this.max.setY(y + height);
+    return this;
+  }
+  setWidth(width) {
+    this.max.setX(this.min.x + width);
+    return this;
+  }
+  setHeight(height) {
+    this.max.setY(this.min.y + height);
+    return this;
+  }
+  get center() {
+    return ReadonlyVec2.fromVec2(
+      this.max.clone().subtract(this.min).divideByScalar(2).add(this.min)
+    );
+  }
+};
+
 // src/engine/GameTail.ts
-var GameTail = class {
-  x = 0;
-  y = 0;
-  width = 0;
-  height = 0;
+var GameTail = class extends Box {
   fill = void 0;
   image = void 0;
   isFixedPosition = false;
   ctx;
   parent = null;
   child = [];
-  get centerX() {
-    return this.x + this.width / 2;
-  }
-  get centerY() {
-    return this.y + this.height / 2;
-  }
   setContext(ctx) {
     this.ctx = ctx;
   }
@@ -67,8 +239,7 @@ var GameCamera = class extends GameTail {
   }
   update(ctx) {
     const { width, height } = ctx.canvas.getScreenSize();
-    this.width = width;
-    this.height = height;
+    this.setWidth(width).setHeight(height);
     const idata = this.effectCtx.createImageData(width, height);
     const buffer32 = new Uint32Array(idata.data.buffer);
     for (let i = 0; i < buffer32.length; i++) {
@@ -93,7 +264,7 @@ var assertReturn = (v, message = "value is nil") => {
   }
   return v;
 };
-var GameCanvas2d = class {
+var GameCanvas2d = class extends Box {
   canvas = document.createElement("canvas");
   ctx2d = assertReturn(this.canvas.getContext("2d"), "can not create 2d context");
   getElement() {
@@ -111,9 +282,15 @@ var GameCanvas2d = class {
   get height() {
     return this.canvas.height;
   }
-  resize(w, h) {
-    this.canvas.width = w;
-    this.canvas.height = h;
+  setWidth(width) {
+    super.setWidth(width);
+    this.canvas.width = width;
+    return this;
+  }
+  setHeight(height) {
+    super.setHeight(height);
+    this.canvas.height = height;
+    return this;
   }
   clear() {
     this.drawRectangle({
@@ -137,71 +314,6 @@ var GameCanvas2d = class {
   }
   fill(fill) {
     this.ctx2d.fillStyle = fill.style;
-  }
-};
-
-// src/engine/vector/Vec2.ts
-var Vec2 = class {
-  x;
-  y;
-  magnitude;
-  constructor(x = 0, y = 0) {
-    this.x = x;
-    this.y = y;
-    this.magnitude = Math.sqrt(this.x ** 2 + this.y ** 2);
-  }
-  /**
-   * Возвращает вектор с заданной длинной
-   * При нормализации вектор сохраняет то же направление, но его длина равна newMagnitude
-   * @see https://docs.unity3d.com/ru/530/ScriptReference/Vector2-normalized.html
-   *
-   * @returns Возвращает новый вектор
-   */
-  normalize(newMagnitude = 1) {
-    const { magnitude } = this;
-    if (magnitude > 0) {
-      return this.multiplyByScalar(newMagnitude / magnitude);
-    }
-    return this.clone();
-  }
-  /**
-   * Вычитает из текущего вектора переданный вектор
-   * 
-   * @returns Возвращает новый вектор
-   */
-  subtract(subtrahend) {
-    return Vec2.create(
-      this.x - subtrahend.x,
-      this.y - subtrahend.y
-    );
-  }
-  setX(x) {
-    return Vec2.create(x, this.y);
-  }
-  setY(y) {
-    return Vec2.create(this.x, y);
-  }
-  mul(v) {
-    return Vec2.create(this.x * v.x, this.y * v.y);
-  }
-  /**
-   * Скалярное произведение
-   * @see https://en.wikipedia.org/wiki/Dot_product
-   */
-  dotProduct(factor) {
-    return this.x * factor.x + this.y * factor.y;
-  }
-  multiplyByScalar(scalar) {
-    return Vec2.create(this.x * scalar, this.y * scalar);
-  }
-  divideByScalar(scalar) {
-    return Vec2.create(this.x / scalar, this.y / scalar);
-  }
-  clone() {
-    return Vec2.create(this.x, this.y);
-  }
-  static create(x = 0, y = 0) {
-    return new Vec2(x, y);
   }
 };
 
@@ -231,7 +343,9 @@ var GameKeyboard = class {
     if (this.isActive("KeyD") || this.isActive("ArrowRight")) {
       x += 1;
     }
-    const vector = Vec2.create(x, y).normalize();
+    const vector = ReadonlyVec2.fromVec2(
+      Vec2.create(x, y).normalize()
+    );
     return vector;
   }
   handleKeydown = (event) => {
@@ -314,13 +428,6 @@ var GameLoop = class {
 };
 
 // src/engine/gameObject/GameCollider.ts
-var e = document.createElement("div");
-document.body.appendChild(e);
-e.style.position = "absolute";
-e.style.left = "0";
-e.style.top = "0";
-e.style.zIndex = "10";
-var logger = (s) => e.innerHTML = s;
 var GameCollider = class extends GameTail {
   collided = false;
   /**
@@ -332,36 +439,31 @@ var GameCollider = class extends GameTail {
     this.ctx = ctx;
     ctx.colliders.push(this);
   }
-  get axisAlignedBoundingBox() {
-    const { x, y, width, height } = this;
-    return {
-      min: new Vec2(x, y),
-      max: new Vec2(width + x, height + y)
-    };
-  }
-  /**
-   * Определение пересечений по теореме о разделяющей оси
-   * @see https://gamedevelopment.tutsplus.com/tutorials/collision-detection-using-the-separating-axis-theorem--gamedev-169
-   */
-  checkCollided(newX, newY, second) {
-    const firstAABB = {
-      min: Vec2.create(newX, newY),
-      max: Vec2.create(newX + this.width, newY + this.height)
-    };
-    const secondAABB = second.axisAlignedBoundingBox;
-    const isCollided = !// x
-    (firstAABB.max.x < secondAABB.min.x || firstAABB.min.x > secondAABB.max.x || (firstAABB.max.y < secondAABB.min.y || firstAABB.min.y > secondAABB.max.y));
-    return isCollided;
-  }
+  // /**
+  //  * Определение пересечений по теореме о разделяющей оси
+  //  * @see https://gamedevelopment.tutsplus.com/tutorials/collision-detection-using-the-separating-axis-theorem--gamedev-169
+  //  */
+  // public checkCollided(newX: number, newY: number, second: GameCollider): boolean {
+  //   const firstAABB = {
+  //     min: Vec2.create(newX, newY),
+  //     max: Vec2.create(newX + this.width, newY + this.height)
+  //   }
+  //   const secondAABB = second.axisAlignedBoundingBox
+  //   const isCollided = !(
+  //     // x
+  //     (firstAABB.max.x < secondAABB.min.x || firstAABB.min.x > secondAABB.max.x)
+  //     // y
+  //     || (firstAABB.max.y < secondAABB.min.y || firstAABB.min.y > secondAABB.max.y)
+  //   )
+  //   return isCollided
+  // }
   updatePosition() {
     let newX = this.x;
     let newY = this.y;
     const speedPerFrame = this.ctx.frameDuration / 1e3;
     newX = this.x + this.velocity.x * speedPerFrame;
     newY = this.y + this.velocity.y * speedPerFrame;
-    this.x = newX;
-    this.y = newY;
-    this.checkCollision();
+    this.setX(newX).setY(newY).checkCollision();
   }
   checkCollision() {
     this.collided = false;
@@ -369,21 +471,17 @@ var GameCollider = class extends GameTail {
       if (collider === this) {
         continue;
       }
-      const d = Vec2.create(this.centerX - collider.centerX, this.centerY - collider.centerY);
+      const d = Vec2.fromReadonlyVec2(this.center).subtract(collider.center);
       const intersectionWidth = (this.width + collider.width) / 2 - Math.abs(d.x);
       const intersectionHeight = (this.height + collider.height) / 2 - Math.abs(d.y);
       if (intersectionWidth > 0 && intersectionHeight > 0) {
         this.collided = true;
         const overlapX = intersectionWidth * Math.sign(d.x);
         const overlapY = intersectionHeight * Math.sign(d.y);
-        if (overlapY !== 0)
-          logger([overlapY]);
         if (Math.abs(overlapX) < Math.abs(overlapY)) {
-          this.x += overlapX;
-          this.collisionVelocity.setX(-this.velocity.x);
+          this.setX(this.x + overlapX);
         } else {
-          this.y += overlapY;
-          this.collisionVelocity.setY(-this.velocity.x);
+          this.setY(this.y + overlapY);
         }
       }
     }
@@ -423,10 +521,7 @@ var GameMap = class extends GameTail {
     map2.forEach((row, x) => {
       maxX = Math.max(maxX, row.length);
       row.forEach((tail, y) => {
-        tail.x = x * this.gridSize;
-        tail.y = y * this.gridSize;
-        tail.width = this.gridSize;
-        tail.height = this.gridSize;
+        tail.setX(x * this.gridSize).setY(y * this.gridSize).setWidth(this.gridSize).setHeight(this.gridSize);
         this.addChild(tail);
         if (tail instanceof GameFloor) {
           this.floors.push(tail);
@@ -435,8 +530,7 @@ var GameMap = class extends GameTail {
         }
       });
     });
-    this.width = maxX * this.gridSize;
-    this.height = maxY * this.gridSize;
+    this.setWidth(maxX * this.gridSize).setHeight(maxY * this.gridSize);
   }
   addUnit(unit) {
     this.addChild(unit);
@@ -454,27 +548,23 @@ var GameMap = class extends GameTail {
 
 // src/engine/gameObject/GameUnit.ts
 var GameUnit = class extends GameCollider {
-  x = 190;
-  y = 190;
 };
 
 // src/engine/gameObject/GamePlayer.ts
 var GamePlayer = class extends GameUnit {
-  width = 50;
-  height = 50;
-  x = 100;
-  y = 80;
   image = document.createElement("img");
   playerState = 0 /* idle */;
   constructor() {
     super();
     this.image.src = "./sprite0.png";
+    this.setWidth(50).setHeight(50);
   }
   update(ctx) {
     const speedPerSecond = 400;
-    this.velocity = ctx.keyboard.vector.normalize(speedPerSecond);
+    this.velocity = Vec2.fromReadonlyVec2(ctx.keyboard.vector).normalize(speedPerSecond);
     this.fill = { style: `hsl(300, 100%, 31%)` };
     this.updatePosition();
+    console.log(this.center.x);
   }
 };
 
@@ -494,17 +584,12 @@ var GameTween = class {
 
 // src/game/BgTail.ts
 var BgTail = class extends GameTail {
-  x = 0;
-  y = 0;
-  width = 10;
-  height = 10;
   gameTween = new GameTween();
   isFixedPosition = true;
   update(ctx) {
     super.update(ctx);
     const { width, height } = ctx.canvas.getScreenSize();
-    this.width = width;
-    this.height = height;
+    this.setWidth(width).setHeight(height);
     this.fill = { style: `hsl(${this.gameTween.calc(ctx.time)}, 100%, 31%)` };
   }
 };
@@ -522,13 +607,12 @@ var DemoBot = class extends GameUnit {
   constructor() {
     super();
     this.image.src = "./sprite0.png";
+    this.setWidth(50).setHeight(50);
   }
   update(ctx) {
     const { parent } = this;
     this.image.src = `./sprite${Math.ceil(ctx.time / 1e3) % 3}.png`;
     assert(parent);
-    this.width = 50;
-    this.height = 50;
     this.updatePosition();
     if (this.collided) {
       this.velocity = Vec2.create(Math.random() * 800 - 400, Math.random() * 800 - 400);
@@ -540,62 +624,66 @@ var DemoBot = class extends GameUnit {
 var gameLoop = new GameLoop();
 var bgTail = new BgTail();
 var map = new GameMap([
-  [new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameWall(), new GameWall(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
-  [new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall()]
+  [new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameWall(), new GameWall(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameWall()],
+  [new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall(), new GameWall()]
 ]);
 var demoBot = new DemoBot();
 var demoBot2 = new DemoBot();
 var demoBot3 = new DemoBot();
 var demoBot4 = new DemoBot();
+var demoBot5 = new DemoBot();
+var demoBot6 = new DemoBot();
 var player = new GamePlayer();
-map.addUnit(demoBot);
-map.addUnit(demoBot2);
-map.addUnit(demoBot3);
-map.addUnit(demoBot4);
-map.addUnit(player);
+map.addUnit(demoBot.setX(100).setY(100));
+map.addUnit(demoBot2.setX(100).setY(100));
+map.addUnit(demoBot3.setX(100).setY(100));
+map.addUnit(demoBot4.setX(100).setY(100));
+map.addUnit(demoBot5.setX(100).setY(100));
+map.addUnit(demoBot6.setX(100).setY(100));
+map.addUnit(player.setX(100).setY(80));
 gameLoop.addTiles(bgTail, map);
 gameLoop.onFrameHandler = (ctx) => {
-  ctx.camera.x = player.x - ctx.canvas.width / 2;
-  ctx.camera.y = player.y - ctx.canvas.height / 2;
-  ctx.camera.x += Math.sin(ctx.time / 1e3) * 10;
-  ctx.camera.y += Math.cos(ctx.time / 1e3) * 10;
+  const cameraPosition = Vec2.create(
+    Math.sin(ctx.time / 1e3) * 10,
+    Math.cos(ctx.time / 1e3) * 10
+  ).add(player.center).subtract(ctx.canvas.center);
+  ctx.camera.setX(cameraPosition.x).setY(cameraPosition.y);
 };
-gameLoop.ctx.canvas.resize(800, 600);
 var canvasEl = gameLoop.ctx.canvas.getElement();
 document.body.appendChild(canvasEl);
 var resizeObserver = new ResizeObserver(([{ contentRect: { width, height } }]) => {
-  gameLoop.ctx.canvas.resize(width, height);
+  gameLoop.ctx.canvas.setWidth(width).setHeight(height);
 });
 resizeObserver.observe(canvasEl);
 canvasEl.style.position = "absolute";

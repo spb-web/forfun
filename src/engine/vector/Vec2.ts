@@ -1,76 +1,108 @@
-export class Vec2 {
-  public readonly x: number
-  public readonly y: number
-  public readonly magnitude: number
+import { ReadonlyVec2 } from "./ReadonlyVec2"
 
+/**
+ * Двумерный вектор c мутабельными методами.
+ */
+export class Vec2 extends ReadonlyVec2 {
   constructor(x: number = 0, y: number = 0) {
-    this.x = x
-    this.y = y
-    this.magnitude = Math.sqrt(this.x ** 2 + this.y ** 2)
+    super(x, y)
+  }
+
+  /**
+   * Установка первой компоненты вектора (x)
+   */
+  public setX(x: number) {
+    this.vector[0] = x
+
+    return this
+  }
+
+  /**
+   * Установка второй компоненты вектора (y)
+   */
+  public setY(y: number) {
+    this.vector[1] = y
+
+    return this
   }
 
   /**
    * Возвращает вектор с заданной длинной
    * При нормализации вектор сохраняет то же направление, но его длина равна newMagnitude
    * @see https://docs.unity3d.com/ru/530/ScriptReference/Vector2-normalized.html
-   *
-   * @returns Возвращает новый вектор
    */
-  public normalize(newMagnitude = 1): Vec2 {
+  public normalize(newMagnitude = 1): this {
     const {magnitude} = this
 
     if (magnitude > 0) {  
       return this.multiplyByScalar(newMagnitude / magnitude)
     }
 
-    return this.clone()
+    return this
   }
 
   /**
    * Вычитает из текущего вектора переданный вектор
-   * 
-   * @returns Возвращает новый вектор
    */ 
-  public subtract(subtrahend: Vec2): Vec2 {
-    return Vec2.create(
-      this.x - subtrahend.x,
-      this.y - subtrahend.y
-    )
-  }
-
-  public setX(x: number) {
-    return Vec2.create(x, this.y)
-  }
-
-  public setY(y: number) {
-    return Vec2.create(this.x, y)
+  public subtract(subtrahend: ReadonlyVec2): this {
+    return this.setX(this.x - subtrahend.x).setY(this.y - subtrahend.y)
   }
   
-  public mul(v: Vec2) {
-    return Vec2.create(this.x * v.x, this.y * v.y)
+  /**
+   * Умножает вектор на переданный вектор
+   */
+  public mul(vector: ReadonlyVec2) {
+    return this.setX(this.x * vector.x).setY(this.y * vector.y)
+  }
+
+  /**
+   * Складывет вектор с переданным вектором
+   */
+  public add(vector: ReadonlyVec2) {
+    return this.setX(this.x + vector.x).setY(this.y + vector.y)
   }
 
   /**
    * Скалярное произведение
    * @see https://en.wikipedia.org/wiki/Dot_product
    */
-  public dotProduct(factor: Vec2) {
+  public dotProduct(factor: ReadonlyVec2): number {
     return (this.x * factor.x) + (this.y * factor.y)
   }
 
-  public multiplyByScalar(scalar: number): Vec2 {
-   return Vec2.create(this.x * scalar, this.y * scalar)
+  /**
+   * Умножает вектор на скаляр
+   */
+  public multiplyByScalar(scalar: number): this {
+   return this.setX(this.x * scalar).setY(this.y * scalar)
   }
 
-  public divideByScalar(scalar: number): Vec2 {
-    return Vec2.create(this.x / scalar, this.y / scalar)
+  /**
+   * Делит вектор на скаляр
+   */
+  public divideByScalar(scalar: number): this {
+    return this.setX(this.x / scalar).setY(this.y / scalar)
   }
 
+  /**
+   * Cоздает копию вектора
+   */
   public clone() {
     return Vec2.create(this.x, this.y)
   }
 
+  /**
+   * Создает новый вектор
+   */
   static create(x: number = 0, y: number = 0) {
     return new Vec2(x, y)
+  }
+
+  /**
+   * Создает новый вектор из ReadonlyVec2
+   * @see ReadonlyVec2
+   */
+  static fromReadonlyVec2(vector: ReadonlyVec2) {
+    return Vec2.create(vector.x, vector.y)
   }
 }
