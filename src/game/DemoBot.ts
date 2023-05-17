@@ -9,7 +9,7 @@ function assert<T>(v: T): asserts v is NonNullable<T> {
 }
 
 export class DemoBot extends GameUnit {
-  public velocity: Vec2 = Vec2.create(Math.random() * 800 - 400, Math.random() * 800 - 400)
+  public velocity: Vec2 = Vec2.create(Math.random() * 1600 - 800, Math.random() * 1600 - 800)
 
   fill = undefined
 
@@ -35,7 +35,7 @@ export class DemoBot extends GameUnit {
     this.updatePosition()
 
     if (this.collided) {
-      this.velocity = Vec2.create(Math.random() * 800 - 400, Math.random() * 800 - 400)
+      this.velocity = Vec2.create(Math.random() * 1600 - 800, Math.random() * 1600 - 800)
     }
   }
 }

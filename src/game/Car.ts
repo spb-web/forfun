@@ -1,15 +1,24 @@
+import { GameTail } from "../engine/GameTail";
 import { GameWall } from "../engine/gameObject/GameWall";
 
 export class Car extends GameWall {
-  public readonly fill = undefined
-  public readonly image = document.createElement('img')
-
   constructor() {
     super()
-    this.image.src = './car.png'
+
+    const car = new GameTail()
+
+    car.image = document.createElement('img')
+    car.image.src = './car.png'
+
 
     this
-      .setWidth(135)
+      .setWidth(95)
       .setHeight(230)
+      .addChild(
+        car
+          .setWidth(135)
+          .setHeight(230)
+          .setX(-20)
+      )
   }
 }

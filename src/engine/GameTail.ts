@@ -29,13 +29,13 @@ export class GameTail extends Box {
     this.child.forEach(tail => tail.update(ctx))
   }
 
-  public draw(ctx: GameContext) {
+  public draw(ctx: GameContext, parentX: number = 0, parentY: number = 0) {
     if (!ctx.camera.isVisible(this)) {
       return
     }
 
-    let x = this.x
-    let y = this.y
+    let x = this.x + parentX
+    let y = this.y + parentY
 
     if (!this.isFixedPosition) {
       x -= ctx.camera.x;
@@ -51,12 +51,12 @@ export class GameTail extends Box {
       image: this.image,
     })
 
-    this.drawChild(ctx)
+    this.drawChild(ctx, this.x, this.y)
   }
 
-  protected drawChild(ctx: GameContext) {
+  protected drawChild(ctx: GameContext, x: number, y: number) {
     this.child.forEach(tail => {
-      tail.draw(ctx)
+      tail.draw(ctx, x, y)
     })
   }
 }
