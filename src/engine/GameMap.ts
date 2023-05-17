@@ -50,6 +50,11 @@ export class GameMap extends GameTail {
     this.units.push(unit)
   }
 
+  public addWall(wall: GameWall) {
+    this.addChild(wall)
+    this.walls.push(wall)
+  }
+
   public draw(ctx: GameContext) {
     this.drawChild(ctx)
   }

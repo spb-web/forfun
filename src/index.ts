@@ -5,6 +5,7 @@ import { GamePlayer } from "./engine/gameObject/GamePlayer";
 import { GameWall } from "./engine/gameObject/GameWall";
 import { Vec2 } from "./engine/vector/Vec2";
 import { BgTail } from "./game/BgTail";
+import { Car } from "./game/Car";
 import { DemoBot } from "./game/DemoBot";
 
 // самый главный объект на котором все держится
@@ -64,6 +65,8 @@ const demoBot5 = new DemoBot()
 const demoBot6 = new DemoBot()
 // типо игрок
 const player = new GamePlayer()
+// типо тачка
+const car = new Car()
 
 map.addUnit(demoBot.setX(100).setY(100))
 map.addUnit(demoBot2.setX(100).setY(100))
@@ -72,6 +75,7 @@ map.addUnit(demoBot4.setX(100).setY(100))
 map.addUnit(demoBot5.setX(100).setY(100))
 map.addUnit(demoBot6.setX(100).setY(100))
 map.addUnit(player.setX(100).setY(80))
+map.addWall(car.setX(650).setY(80))
 
 // добавляем bgTail в цикл отрисовки
 gameLoop.addTiles(bgTail, map)

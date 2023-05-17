@@ -266,7 +266,14 @@ var assertReturn = (v, message = "value is nil") => {
 };
 var GameCanvas2d = class extends Box {
   canvas = document.createElement("canvas");
-  ctx2d = assertReturn(this.canvas.getContext("2d"), "can not create 2d context");
+  ctx2d = assertReturn(
+    this.canvas.getContext("2d", { alpha: false }),
+    "can not create 2d context"
+  );
+  constructor() {
+    super();
+    this.ctx2d.imageSmoothingEnabled = false;
+  }
   getElement() {
     return this.canvas;
   }
@@ -536,6 +543,10 @@ var GameMap = class extends GameTail {
     this.addChild(unit);
     this.units.push(unit);
   }
+  addWall(wall) {
+    this.addChild(wall);
+    this.walls.push(wall);
+  }
   draw(ctx) {
     this.drawChild(ctx);
   }
@@ -591,6 +602,17 @@ var BgTail = class extends GameTail {
     const { width, height } = ctx.canvas.getScreenSize();
     this.setWidth(width).setHeight(height);
     this.fill = { style: `hsl(${this.gameTween.calc(ctx.time)}, 100%, 31%)` };
+  }
+};
+
+// src/game/Car.ts
+var Car = class extends GameWall {
+  fill = void 0;
+  image = document.createElement("img");
+  constructor() {
+    super();
+    this.image.src = "./car.png";
+    this.setWidth(135).setHeight(230);
   }
 };
 
@@ -665,6 +687,7 @@ var demoBot4 = new DemoBot();
 var demoBot5 = new DemoBot();
 var demoBot6 = new DemoBot();
 var player = new GamePlayer();
+var car = new Car();
 map.addUnit(demoBot.setX(100).setY(100));
 map.addUnit(demoBot2.setX(100).setY(100));
 map.addUnit(demoBot3.setX(100).setY(100));
@@ -672,6 +695,7 @@ map.addUnit(demoBot4.setX(100).setY(100));
 map.addUnit(demoBot5.setX(100).setY(100));
 map.addUnit(demoBot6.setX(100).setY(100));
 map.addUnit(player.setX(100).setY(80));
+map.addWall(car.setX(650).setY(80));
 gameLoop.addTiles(bgTail, map);
 gameLoop.onFrameHandler = (ctx) => {
   const cameraPosition = Vec2.create(

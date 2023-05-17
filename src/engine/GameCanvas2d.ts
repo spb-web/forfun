@@ -27,7 +27,16 @@ type RectangleData = Rectangle & {
 
 export class GameCanvas2d extends Box {
   private canvas = document.createElement('canvas')
-  private ctx2d = assertReturn(this.canvas.getContext('2d'), 'can not create 2d context')
+  private ctx2d = assertReturn(
+    this.canvas.getContext('2d', {alpha: false}),
+    'can not create 2d context',
+  )
+
+  constructor() {
+    super()
+
+    this.ctx2d.imageSmoothingEnabled = false
+  }
 
   public getElement() {
     return this.canvas
