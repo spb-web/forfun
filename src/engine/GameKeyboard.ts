@@ -18,19 +18,19 @@ export class GameKeyboard {
     let x = 0
     let y = 0
 
-    if (this.isActive('KeyW') || this.isActive('ArrowUp')) {
+    if (this.isActive('KeyW')) {
       y -= 1
     }
 
-    if (this.isActive('KeyS') || this.isActive('ArrowDown')) {
+    if (this.isActive('KeyS')) {
       y += 1
     }
 
-    if (this.isActive('KeyA') || this.isActive('ArrowLeft')) {
+    if (this.isActive('KeyA')) {
       x -= 1
     }
 
-    if (this.isActive('KeyD') || this.isActive('ArrowRight')) {
+    if (this.isActive('KeyD')) {
       x += 1
     }
 

@@ -81,12 +81,8 @@ map.addWall(car.setX(650).setY(80))
 gameLoop.addTiles(bgTail, map)
 
 gameLoop.onFrameHandler = (ctx) => {
-  // каждый фрейм двигаем камеру
   const cameraPosition = Vec2
-    .create(
-      Math.sin(ctx.time / 1000) * 10,
-      Math.cos(ctx.time / 1000) * 10,
-    )
+    .create()
     .add(player.center)
     .subtract(ctx.canvas.center)
 

@@ -155,6 +155,8 @@ var Box = class {
   }
   setX(x) {
     const { width } = this;
+    const direction = this.min < x ? 1 : this.min > x ? -1 : 0;
+    console.log(this.min.x);
     this.min.setX(x);
     this.max.setX(x + width);
     return this;
@@ -338,16 +340,16 @@ var GameKeyboard = class {
   get vector() {
     let x = 0;
     let y = 0;
-    if (this.isActive("KeyW") || this.isActive("ArrowUp")) {
+    if (this.isActive("KeyW")) {
       y -= 1;
     }
-    if (this.isActive("KeyS") || this.isActive("ArrowDown")) {
+    if (this.isActive("KeyS")) {
       y += 1;
     }
-    if (this.isActive("KeyA") || this.isActive("ArrowLeft")) {
+    if (this.isActive("KeyA")) {
       x -= 1;
     }
-    if (this.isActive("KeyD") || this.isActive("ArrowRight")) {
+    if (this.isActive("KeyD")) {
       x += 1;
     }
     const vector = ReadonlyVec2.fromVec2(
@@ -704,10 +706,7 @@ map.addUnit(player.setX(100).setY(80));
 map.addWall(car.setX(650).setY(80));
 gameLoop.addTiles(bgTail, map);
 gameLoop.onFrameHandler = (ctx) => {
-  const cameraPosition = Vec2.create(
-    Math.sin(ctx.time / 1e3) * 10,
-    Math.cos(ctx.time / 1e3) * 10
-  ).add(player.center).subtract(ctx.canvas.center);
+  const cameraPosition = Vec2.create().add(player.center).subtract(ctx.canvas.center);
   ctx.camera.setX(cameraPosition.x).setY(cameraPosition.y);
 };
 var canvasEl = gameLoop.ctx.canvas.getElement();
