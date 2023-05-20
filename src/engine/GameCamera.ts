@@ -1,4 +1,3 @@
-import { GameContext } from "./GameContext";
 import { GameTail } from "./GameTail";
 export class GameCamera extends GameTail {
   isFixedPosition = false
@@ -13,8 +12,8 @@ export class GameCamera extends GameTail {
     this.effectCtx = this.image.getContext("2d")
   }
 
-  update(ctx: GameContext): void {
-    const {width, height} = ctx.canvas.getScreenSize()
+  update(): void {
+    const {width, height} = this.scene.ctx.canvas.getScreenSize()
     
     this
       .setWidth(width)

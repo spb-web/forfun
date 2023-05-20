@@ -1,4 +1,3 @@
-import { GameContext } from "../GameContext";
 import { Vec2 } from "../vector/Vec2";
 import { GameUnit } from "./GameUnit";
 
@@ -18,12 +17,12 @@ export class GamePlayer extends GameUnit {
       .setHeight(50)
   }
 
-  public update(ctx: GameContext): void {
+  public update(): void {
     // скорость 400px в секунду при любом fps
     const speedPerSecond = 400
 
     this.velocity = Vec2
-      .fromReadonlyVec2(ctx.keyboard.vector)
+      .fromReadonlyVec2(this.scene.ctx.keyboard.vector)
       .normalize(speedPerSecond)
 
     this.updatePosition()

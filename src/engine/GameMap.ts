@@ -57,9 +57,7 @@ export class GameMap extends GameTail {
   }
 
   public draw() {
-    if (this.ctx.resources.loaded === this.ctx.resources.total) {
-      this.drawChild()
-    }
+    this.drawChild()
   }
 
   protected drawChild() {

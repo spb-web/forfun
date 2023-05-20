@@ -19,7 +19,10 @@ export class Car extends GameWall {
   }
 
   init() {
-    this.ctx.resources.add('car', './car.png')
-    this.car.image = this.ctx.resources.images.get('car')
+    super.init()
+
+    const {ctx} = this.scene
+    ctx.resources.add('car', './car.png')
+    this.car.image = ctx.resources.images.get('car')
   }
 }

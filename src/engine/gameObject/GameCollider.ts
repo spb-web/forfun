@@ -1,4 +1,3 @@
-import { GameContext } from "../GameContext";
 import { GameTail } from "../GameTail";
 import { Vec2 } from "../vector/Vec2";
 
@@ -10,11 +9,9 @@ export class GameCollider extends GameTail {
   public velocity = Vec2.create()
 
   public collisionVelocity = Vec2.create()
-
-  public setContext(ctx: GameContext): void {
-    super.setContext(ctx)
-
-    ctx.colliders.push(this)
+  
+  public init(): void {
+    this.scene.colliders.push(this)
   }
 
   // /**
@@ -38,10 +35,12 @@ export class GameCollider extends GameTail {
   // }
 
   updatePosition() {
+    const {scene: {ctx}} = this
+
     // Check collisions with objects
     let newX = this.x
     let newY = this.y
-    const speedPerFrame = this.ctx.frameDuration / 1000
+    const speedPerFrame = ctx.frameDuration / 1000
 
     newX = this.x + this.velocity.x * speedPerFrame
     newY = this.y + this.velocity.y * speedPerFrame
@@ -55,7 +54,7 @@ export class GameCollider extends GameTail {
 
   checkCollision(): void {
     this.collided = false
-    for (const collider of this.ctx.colliders) {
+    for (const collider of this.scene.colliders) {
       if (collider === this) {
         continue
       }

@@ -1,23 +1,25 @@
-import type { GameContext } from "./GameContext";
 import { Box } from "./Box";
 import { GameResourceImage } from "./resources/GameResourceImage";
+import { GameScene } from "./GameScene";
 
 export class GameTail extends Box {
   fill?: {style: any} | undefined = undefined
   image?: CanvasImageSource | GameResourceImage | undefined = undefined
   isFixedPosition = false
-  ctx!: GameContext
+  scene!: GameScene 
   
   parent: GameTail | null = null
   
   public child: GameTail[] = []
 
-  public init(): void {}
+  public setScene(scene: GameScene): void {
+    this.scene = scene
+    console.log(this, this.init)
 
-  public setContext(ctx: GameContext): void {
-    this.ctx = ctx
     this.init()
   }
+
+  public init(): void {}
   
   public setParent(tail: GameTail) {
     this.parent = tail
@@ -29,14 +31,17 @@ export class GameTail extends Box {
     return this.child.push(...child)
   }
 
-  public update(ctx: GameContext) {
-    this.child.forEach(tail => tail.update(ctx))
+  public onFrame() {
+    this.update()
+    this.child.forEach(tail => tail.onFrame())
   }
 
-  public draw(parentX: number = 0, parentY: number = 0) {
-    const {ctx} = this
+  public update() {}
 
-    if (!ctx.camera.checkCollided(Box.from(this).setX(this.x + parentX).setY(this.y + parentY))) {
+  public draw(parentX: number = 0, parentY: number = 0) {
+    const {scene: {camera, ctx}} = this
+
+    if (!camera.checkCollided(Box.from(this).setX(this.x + parentX).setY(this.y + parentY))) {
       return
     }
 
@@ -44,8 +49,8 @@ export class GameTail extends Box {
     let y = this.y + parentY
 
     if (!this.isFixedPosition) {
-      x -= ctx.camera.x;
-      y -= ctx.camera.y;
+      x -= camera.x;
+      y -= camera.y;
     }
 
     ctx.canvas.drawRectangle({

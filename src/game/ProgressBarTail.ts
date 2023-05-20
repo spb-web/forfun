@@ -1,15 +1,18 @@
 import { GameTail } from "../engine/GameTail";
 
-export class LoadScreen extends GameTail {
+export class ProgressBarTail extends GameTail {
   private progress = 0
   private distract = 0
 
   init() {
+    super.init()
+
     this.setHeight(50)
   }
 
   public update(): void {
-    const progress = this.ctx.resources.loaded / this.ctx.resources.total
+    const {scene: {camera, ctx}} = this
+    const progress = ctx.resources.loaded / ctx.resources.total
 
     if (progress === 1) {
       this.fill = undefined
@@ -17,7 +20,7 @@ export class LoadScreen extends GameTail {
       return
     }
 
-    const maxWidth = this.ctx.canvas.width
+    const maxWidth = ctx.canvas.width
     const minHeight = 50
     const width = maxWidth * progress
 
@@ -25,7 +28,7 @@ export class LoadScreen extends GameTail {
       this.distract = 1
     }
 
-    this.distract = Math.max(0, this.distract - (this.ctx.frameDuration / 1000) * 3)
+    this.distract = Math.max(0, this.distract - (ctx.frameDuration / 1000) * 3)
     this.fill = {
       style: `rgb(255, ${255 - this.distract * 255}, ${255 - this.distract * 255})`
     }
@@ -37,7 +40,7 @@ export class LoadScreen extends GameTail {
     this
       .setWidth(width)
       .setHeight(height)
-      .setX((this.ctx.canvas.width - width) / 2 + this.ctx.camera.x)
-      .setY((this.ctx.camera.height - height) / 2 + this.ctx.camera.y)
+      .setX((ctx.canvas.width - width) / 2 + camera.x)
+      .setY((ctx.canvas.height - height) / 2 + camera.y)
   }
 }

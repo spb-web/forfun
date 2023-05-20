@@ -6,9 +6,8 @@ export class BgTail extends GameTail {
   gameTween = new GameTween()
   isFixedPosition = true
 
-  update(ctx: GameContext): void {
-    super.update(ctx)
-
+  update(): void {
+    const {scene: {ctx}} = this
     const {width, height} = ctx.canvas.getScreenSize()
 
     this

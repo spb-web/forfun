@@ -1,4 +1,3 @@
-import type { GameContext } from "../engine/GameContext";
 import { GameUnit } from "../engine/gameObject/GameUnit";
 import { Vec2 } from "../engine/vector/Vec2";
 
@@ -23,18 +22,22 @@ export class DemoBot extends GameUnit {
   }
 
   init() {
-    this.ctx.resources.add('bot-character-0', './sprite0.png')
-    this.ctx.resources.add('bot-character-1', './sprite1.png')
-    this.ctx.resources.add('bot-character-2', './sprite2.png')
+    super.init()
 
-    this.image = this.ctx.resources.images.get('player-character')
+    const {ctx} = this.scene
+
+    ctx.resources.add('bot-character-0', './sprite0.png')
+    ctx.resources.add('bot-character-1', './sprite1.png')
+    ctx.resources.add('bot-character-2', './sprite2.png')
+
+    this.image = ctx.resources.images.get('player-character')
   }
     
-  update(ctx: GameContext): void {
-    const {parent} = this
+  update(): void {
+    const {parent, scene: {ctx}} = this
 
     // смена спрайта каждую секунду реального времени, не зависит от тормазов отрисовки (fps)
-    this.image = this.ctx.resources.images.get(`bot-character-${Math.ceil(ctx.time / 1000) % 3}`)
+    this.image = ctx.resources.images.get(`bot-character-${Math.ceil(ctx.time / 1000) % 3}`)
 
     assert(parent)
 

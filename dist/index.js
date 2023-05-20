@@ -376,18 +376,10 @@ var GameContext = class {
   keyboard = new GameKeyboard();
   canvas = new GameCanvas2d();
   resources = new GameResources();
-  gameCamera;
-  colliders = [];
   frame = {
     time: Date.now(),
     duration: 0
   };
-  get camera() {
-    if (!this.gameCamera) {
-      throw new Error();
-    }
-    return this.gameCamera;
-  }
   get time() {
     return this.frame.time;
   }
@@ -402,34 +394,30 @@ var GameContext = class {
     this.frame.duration = time - this.frame.time;
     this.frame.time = time;
   }
-  setCamera(camera) {
-    this.gameCamera = camera;
-  }
 };
 
 // src/engine/GameLoop.ts
 var GameLoop = class {
+  scenes = /* @__PURE__ */ new Map();
+  activeSceneId = "default";
   ctx;
   onFrameHandler = () => {
   };
   isStarted = false;
-  tails = [];
   constructor() {
     this.ctx = new GameContext(this);
   }
-  setCamera(camera) {
-    this.bindCtx(camera).ctx.setCamera(camera);
-    return this;
+  get activeScene() {
+    return this.scenes.get(this.activeSceneId);
   }
-  addTiles(...tails) {
-    tails.forEach((tail) => this.bindCtx(tail));
-    this.tails.push(...tails);
-    return this;
+  addScenes(...scenes) {
+    scenes.forEach((scene) => {
+      scene.setContext(this.ctx);
+      this.scenes.set(scene.id, scene);
+    });
   }
-  bindCtx(tail) {
-    tail.setContext(this.ctx);
-    tail.child.forEach((children) => this.bindCtx(children));
-    return this;
+  setActiveScenes(id) {
+    this.activeSceneId = id;
   }
   start() {
     if (this.isStarted) {
@@ -442,26 +430,19 @@ var GameLoop = class {
     return this;
   }
   onFrame() {
+    const { activeScene } = this;
     this.ctx.onFrame();
-    this.ctx.camera.update(this.ctx);
-    this.tails.forEach((tail) => {
-      tail.update(this.ctx);
-    });
+    if (activeScene) {
+      this.ctx.canvas.clear();
+      activeScene.onFrame();
+    }
     this.onFrameHandler(this.ctx);
     if (this.ctx.frameDuration > 34) {
       console.warn("onFrame executing is too long");
     }
-    this.draw();
     requestAnimationFrame(() => {
       this.onFrame();
     });
-  }
-  draw() {
-    this.ctx.canvas.clear();
-    this.tails.forEach((tail) => {
-      tail.draw();
-    });
-    this.ctx.camera.draw();
   }
 };
 
@@ -470,14 +451,15 @@ var GameTail = class extends Box {
   fill = void 0;
   image = void 0;
   isFixedPosition = false;
-  ctx;
+  scene;
   parent = null;
   child = [];
-  init() {
-  }
-  setContext(ctx) {
-    this.ctx = ctx;
+  setScene(scene) {
+    this.scene = scene;
+    console.log(this, this.init);
     this.init();
+  }
+  init() {
   }
   setParent(tail) {
     this.parent = tail;
@@ -486,19 +468,22 @@ var GameTail = class extends Box {
     child.forEach((tail) => tail.setParent(this));
     return this.child.push(...child);
   }
-  update(ctx) {
-    this.child.forEach((tail) => tail.update(ctx));
+  onFrame() {
+    this.update();
+    this.child.forEach((tail) => tail.onFrame());
+  }
+  update() {
   }
   draw(parentX = 0, parentY = 0) {
-    const { ctx } = this;
-    if (!ctx.camera.checkCollided(Box.from(this).setX(this.x + parentX).setY(this.y + parentY))) {
+    const { scene: { camera: camera2, ctx } } = this;
+    if (!camera2.checkCollided(Box.from(this).setX(this.x + parentX).setY(this.y + parentY))) {
       return;
     }
     let x = this.x + parentX;
     let y = this.y + parentY;
     if (!this.isFixedPosition) {
-      x -= ctx.camera.x;
-      y -= ctx.camera.y;
+      x -= camera2.x;
+      y -= camera2.y;
     }
     ctx.canvas.drawRectangle({
       x,
@@ -525,9 +510,8 @@ var GameCollider = class extends GameTail {
    */
   velocity = Vec2.create();
   collisionVelocity = Vec2.create();
-  setContext(ctx) {
-    super.setContext(ctx);
-    ctx.colliders.push(this);
+  init() {
+    this.scene.colliders.push(this);
   }
   // /**
   //  * Определение пересечений по теореме о разделяющей оси
@@ -548,16 +532,17 @@ var GameCollider = class extends GameTail {
   //   return isCollided
   // }
   updatePosition() {
+    const { scene: { ctx } } = this;
     let newX = this.x;
     let newY = this.y;
-    const speedPerFrame = this.ctx.frameDuration / 1e3;
+    const speedPerFrame = ctx.frameDuration / 1e3;
     newX = this.x + this.velocity.x * speedPerFrame;
     newY = this.y + this.velocity.y * speedPerFrame;
     this.setX(newX).setY(newY).checkCollision();
   }
   checkCollision() {
     this.collided = false;
-    for (const collider of this.ctx.colliders) {
+    for (const collider of this.scene.colliders) {
       if (collider === this) {
         continue;
       }
@@ -622,9 +607,7 @@ var GameMap = class extends GameTail {
     this.walls.push(wall);
   }
   draw() {
-    if (this.ctx.resources.loaded === this.ctx.resources.total) {
-      this.drawChild();
-    }
+    this.drawChild();
   }
   drawChild() {
     this.floors.forEach((tail) => tail.draw());
@@ -636,16 +619,20 @@ var GameMap = class extends GameTail {
 // src/game/Floor.ts
 var Floor = class extends GameFloor {
   init() {
-    this.ctx.resources.add("floor", "./floor.jpg");
-    this.image = this.ctx.resources.images.get("floor");
+    super.init();
+    const { scene: { ctx } } = this;
+    ctx.resources.add("floor", "./floor.jpg");
+    this.image = ctx.resources.images.get("floor");
   }
 };
 
 // src/game/Wall.ts
 var Wall = class extends GameWall {
   init() {
-    this.ctx.resources.add("wall", "./wall.jpg");
-    this.image = this.ctx.resources.images.get("wall");
+    super.init();
+    const { scene: { ctx } } = this;
+    ctx.resources.add("wall", "./wall.jpg");
+    this.image = ctx.resources.images.get("wall");
   }
 };
 
@@ -667,8 +654,8 @@ var GameTween = class {
 var BgTail = class extends GameTail {
   gameTween = new GameTween();
   isFixedPosition = true;
-  update(ctx) {
-    super.update(ctx);
+  update() {
+    const { scene: { ctx } } = this;
     const { width, height } = ctx.canvas.getScreenSize();
     this.setWidth(width).setHeight(height);
     this.fill = { style: `hsl(${this.gameTween.calc(ctx.time)}, 100%, 31%)` };
@@ -685,8 +672,10 @@ var Car = class extends GameWall {
     );
   }
   init() {
-    this.ctx.resources.add("car", "./car.png");
-    this.car.image = this.ctx.resources.images.get("car");
+    super.init();
+    const { ctx } = this.scene;
+    ctx.resources.add("car", "./car.png");
+    this.car.image = ctx.resources.images.get("car");
   }
 };
 
@@ -708,14 +697,16 @@ var DemoBot = class extends GameUnit {
     this.setWidth(50).setHeight(50);
   }
   init() {
-    this.ctx.resources.add("bot-character-0", "./sprite0.png");
-    this.ctx.resources.add("bot-character-1", "./sprite1.png");
-    this.ctx.resources.add("bot-character-2", "./sprite2.png");
-    this.image = this.ctx.resources.images.get("player-character");
+    super.init();
+    const { ctx } = this.scene;
+    ctx.resources.add("bot-character-0", "./sprite0.png");
+    ctx.resources.add("bot-character-1", "./sprite1.png");
+    ctx.resources.add("bot-character-2", "./sprite2.png");
+    this.image = ctx.resources.images.get("player-character");
   }
-  update(ctx) {
-    const { parent } = this;
-    this.image = this.ctx.resources.images.get(`bot-character-${Math.ceil(ctx.time / 1e3) % 3}`);
+  update() {
+    const { parent, scene: { ctx } } = this;
+    this.image = ctx.resources.images.get(`bot-character-${Math.ceil(ctx.time / 1e3) % 3}`);
     assert(parent);
     this.updatePosition();
     if (this.collided) {
@@ -733,8 +724,8 @@ var GameCamera = class extends GameTail {
     this.image = new OffscreenCanvas(256, 256);
     this.effectCtx = this.image.getContext("2d");
   }
-  update(ctx) {
-    const { width, height } = ctx.canvas.getScreenSize();
+  update() {
+    const { width, height } = this.scene.ctx.canvas.getScreenSize();
     this.setWidth(width).setHeight(height);
     const idata = this.effectCtx.createImageData(width, height);
     const buffer32 = new Uint32Array(idata.data.buffer);
@@ -760,9 +751,9 @@ var GamePlayer = class extends GameUnit {
     super();
     this.setWidth(50).setHeight(50);
   }
-  update(ctx) {
+  update() {
     const speedPerSecond = 400;
-    this.velocity = Vec2.fromReadonlyVec2(ctx.keyboard.vector).normalize(speedPerSecond);
+    this.velocity = Vec2.fromReadonlyVec2(this.scene.ctx.keyboard.vector).normalize(speedPerSecond);
     this.updatePosition();
   }
 };
@@ -774,21 +765,24 @@ var Player = class extends GamePlayer {
   /** Тайл с текстурой игрока */
   character = new GameTail();
   init() {
-    this.ctx.resources.add("player-character", "./sprite0.png");
-    this.character.image = this.ctx.resources.images.get("player-character");
+    super.init();
+    const { scene: { ctx } } = this;
+    ctx.resources.add("player-character", "./sprite0.png");
+    this.character.image = ctx.resources.images.get("player-character");
     this.addChild(
       this.glow.setWidth(450).setHeight(450).setX(-225).setY(-225),
       this.character.setWidth(50).setHeight(50).setX(0).setY(0)
     );
   }
-  update(ctx) {
-    super.update(ctx);
+  update() {
+    super.update();
+    const { scene: { camera: camera2, ctx } } = this;
     const glowGradient = ctx.canvas.ctx2d.createRadialGradient(
-      this.center.x - ctx.camera.x,
-      this.center.y - ctx.camera.y,
+      this.center.x - camera2.x,
+      this.center.y - camera2.y,
       0,
-      this.center.x - ctx.camera.x,
-      this.center.y - ctx.camera.y,
+      this.center.x - camera2.x,
+      this.center.y - camera2.y,
       200
     );
     glowGradient.addColorStop(0, "rgba(255, 255, 255, 0.4)");
@@ -799,38 +793,52 @@ var Player = class extends GamePlayer {
   }
 };
 
-// src/game/LoadScreen.ts
-var LoadScreen = class extends GameTail {
-  progress = 0;
-  distract = 0;
-  init() {
-    this.setHeight(50);
+// src/engine/GameScene.ts
+var GameScene = class {
+  id;
+  ctx;
+  camera;
+  colliders = [];
+  onFrameHandler = () => {
+  };
+  tails = [];
+  constructor(id) {
+    this.id = id;
   }
-  update() {
-    const progress = this.ctx.resources.loaded / this.ctx.resources.total;
-    if (progress === 1) {
-      this.fill = void 0;
-      return;
+  setContext(ctx) {
+    this.ctx = ctx;
+    this.tails.forEach((tail) => this.bindCtx(tail));
+    this.bindCtx(this.camera);
+    console.log(this.tails);
+  }
+  setCamera(camera2) {
+    this.bindCtx(camera2);
+    this.camera = camera2;
+  }
+  addTiles(...tails) {
+    tails.forEach((tail) => this.bindCtx(tail));
+    this.tails.push(...tails);
+  }
+  onFrame() {
+    this.camera.onFrame();
+    this.tails.forEach((tail) => tail.onFrame());
+    this.onFrameHandler(this.ctx);
+    this.draw();
+  }
+  draw() {
+    this.tails.forEach((tail) => tail.draw());
+    this.camera.draw();
+  }
+  bindCtx(tail) {
+    if (this.ctx) {
+      tail.setScene(this);
+      tail.child.forEach((children) => this.bindCtx(children));
     }
-    const maxWidth = this.ctx.canvas.width;
-    const minHeight = 50;
-    const width = maxWidth * progress;
-    if (progress !== this.progress) {
-      this.distract = 1;
-    }
-    this.distract = Math.max(0, this.distract - this.ctx.frameDuration / 1e3 * 3);
-    this.fill = {
-      style: `rgb(255, ${255 - this.distract * 255}, ${255 - this.distract * 255})`
-    };
-    const height = minHeight + 15 * this.distract;
-    this.progress = progress;
-    this.setWidth(width).setHeight(height).setX((this.ctx.canvas.width - width) / 2 + this.ctx.camera.x).setY((this.ctx.camera.height - height) / 2 + this.ctx.camera.y);
   }
 };
 
-// src/index.ts
-var gameLoop = new GameLoop();
-var loadScreen = new LoadScreen();
+// src/game/sceens/firstLevel.ts
+var firstLevel = new GameScene("first-level");
 var bgTail = new BgTail();
 var map = new GameMap([
   [new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall()],
@@ -875,7 +883,7 @@ var demoBot5 = new DemoBot();
 var demoBot6 = new DemoBot();
 var player = new Player();
 var car = new Car();
-gameLoop.addTiles(
+firstLevel.addTiles(
   bgTail,
   map.addUnits(
     demoBot.setX(100).setY(100),
@@ -886,16 +894,66 @@ gameLoop.addTiles(
     demoBot6.setX(100).setY(100),
     player.setX(100).setY(80),
     car.setX(650).setY(80)
-  ),
-  loadScreen
-).setCamera(GameCamera.create()).onFrameHandler = (ctx) => {
+  )
+);
+firstLevel.setCamera(GameCamera.create());
+firstLevel.onFrameHandler = (ctx) => {
   const cameraPosition = Vec2.create(
     Math.sin(ctx.time / 1e3) * 10,
     Math.cos(ctx.time / 1e3) * 10
   ).add(player.center).subtract(ctx.canvas.center);
-  ctx.camera.setX(cameraPosition.x).setY(cameraPosition.y);
+  firstLevel.camera.setX(cameraPosition.x).setY(cameraPosition.y);
 };
+
+// src/game/ProgressBarTail.ts
+var ProgressBarTail = class extends GameTail {
+  progress = 0;
+  distract = 0;
+  init() {
+    super.init();
+    this.setHeight(50);
+  }
+  update() {
+    const { scene: { camera: camera2, ctx } } = this;
+    const progress2 = ctx.resources.loaded / ctx.resources.total;
+    if (progress2 === 1) {
+      this.fill = void 0;
+      return;
+    }
+    const maxWidth = ctx.canvas.width;
+    const minHeight = 50;
+    const width = maxWidth * progress2;
+    if (progress2 !== this.progress) {
+      this.distract = 1;
+    }
+    this.distract = Math.max(0, this.distract - ctx.frameDuration / 1e3 * 3);
+    this.fill = {
+      style: `rgb(255, ${255 - this.distract * 255}, ${255 - this.distract * 255})`
+    };
+    const height = minHeight + 15 * this.distract;
+    this.progress = progress2;
+    this.setWidth(width).setHeight(height).setX((ctx.canvas.width - width) / 2 + camera2.x).setY((ctx.canvas.height - height) / 2 + camera2.y);
+  }
+};
+
+// src/game/sceens/loadScreen.ts
+var loadScreen = new GameScene("load-screen");
+var progress = new ProgressBarTail();
+var camera = new GameCamera();
+loadScreen.addTiles(progress);
+loadScreen.setCamera(camera);
+
+// src/index.ts
+var gameLoop = new GameLoop();
+gameLoop.onFrameHandler = () => {
+};
+gameLoop.addScenes(firstLevel, loadScreen);
+gameLoop.setActiveScenes("load-screen");
 gameLoop.start();
+gameLoop.ctx.resources.load().then(() => {
+  console.log("\u0440\u0435\u0441\u0443\u0440\u0441\u044B \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u044B");
+  gameLoop.setActiveScenes("first-level");
+}).catch(console.error);
 var canvasEl = gameLoop.ctx.canvas.getElement();
 document.body.appendChild(canvasEl);
 var resizeObserver = new ResizeObserver(([{ contentRect: { width, height } }]) => {
@@ -907,6 +965,3 @@ canvasEl.style.left = "0";
 canvasEl.style.top = "0";
 canvasEl.style.width = "100%";
 canvasEl.style.height = "100%";
-gameLoop.ctx.resources.load().then(() => {
-  console.log("\u0440\u0435\u0441\u0443\u0440\u0441\u044B \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u044B");
-}).catch(console.error);
