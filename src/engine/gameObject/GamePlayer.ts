@@ -8,12 +8,10 @@ enum PlayerState {
 }
 
 export class GamePlayer extends GameUnit {
-  image = document.createElement('img')
   playerState: PlayerState = PlayerState.idle
 
   constructor() {
     super()
-    this.image.src = './sprite0.png'
 
     this
       .setWidth(50)
@@ -28,11 +26,6 @@ export class GamePlayer extends GameUnit {
       .fromReadonlyVec2(ctx.keyboard.vector)
       .normalize(speedPerSecond)
 
-    this.fill = {style: `hsl(300, 100%, 31%)`}
-
-    // console.log(this.x, this.y, this.width, this.height)
-
     this.updatePosition()
-    console.log(this.center.x)
   }
 }

@@ -1,21 +1,39 @@
+import { type GameCamera } from "./GameCamera"
 import { GameContext } from "./GameContext"
 import { GameTail } from "./GameTail"
 
 export class GameLoop {
-  public ctx = new GameContext()
+  public ctx: GameContext
   public onFrameHandler: (ctx: GameContext) => void = () => {}
   
   private isStarted = false
   private tails: GameTail[] = []
 
-  public addTiles(...tails: GameTail[]) {
+  constructor() {
+    this.ctx = new GameContext(this)
+  }
+
+  public setCamera(camera: GameCamera): GameLoop {
+    this
+      .bindCtx(camera)
+      .ctx
+      .setCamera(camera)
+
+    return this
+  }
+
+  public addTiles(...tails: GameTail[]): GameLoop {
     tails.forEach(tail => this.bindCtx(tail))
-    return this.tails.push(...tails)
+    this.tails.push(...tails)
+
+    return this
   }
 
   bindCtx(tail: GameTail) {
     tail.setContext(this.ctx)
     tail.child.forEach(children => this.bindCtx(children))
+
+    return this
   }
 
   public start() {
@@ -28,6 +46,8 @@ export class GameLoop {
     requestAnimationFrame(() => {
       this.onFrame()
     })
+
+    return this
   }
 
   private onFrame() {
@@ -55,9 +75,9 @@ export class GameLoop {
     this.ctx.canvas.clear()
 
     this.tails.forEach((tail) => {
-      tail.draw(this.ctx)
+      tail.draw()
     })
 
-    this.ctx.camera.draw(this.ctx)
+    this.ctx.camera.draw()
   }
 }

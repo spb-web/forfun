@@ -1,4 +1,5 @@
 import { Box } from "./Box"
+import { GameResourceImage } from "./resources/GameResourceImage"
 
 const assertReturn = <T>(v: T, message = 'value is nil'): NonNullable<T> => {
   if (!v) {
@@ -22,12 +23,12 @@ type Rectangle = {
 
 type RectangleData = Rectangle & {
   fill: FillData | undefined
-  image?: CanvasImageSource | undefined
+  image?: CanvasImageSource | GameResourceImage | undefined
 }
 
 export class GameCanvas2d extends Box {
   private canvas = document.createElement('canvas')
-  private ctx2d = assertReturn(
+  public ctx2d = assertReturn(
     this.canvas.getContext('2d', {alpha: false}),
     'can not create 2d context',
   )
@@ -89,7 +90,13 @@ export class GameCanvas2d extends Box {
     }
 
     if (image) {
-      this.ctx2d.drawImage(image, x, y, width, height)
+      if (image instanceof GameResourceImage) {
+        if (image.data) {
+          this.ctx2d.drawImage(image.data, x, y, width, height)
+        }
+      } else {
+        this.ctx2d.drawImage(image, x, y, width, height)
+      }
     }
   }
 

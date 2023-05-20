@@ -1,4 +1,3 @@
-import { GameContext } from "./GameContext";
 import { GameWall } from "./gameObject/GameWall";
 import { GameTail } from "./GameTail";
 import { GameUnit } from "./gameObject/GameUnit";
@@ -45,9 +44,11 @@ export class GameMap extends GameTail {
       .setHeight(maxY * this.gridSize)
   }
 
-  public addUnit(unit: GameUnit) {
-    this.addChild(unit)
-    this.units.push(unit)
+  public addUnits(...units: GameUnit[]) {
+    this.addChild(...units)
+    this.units.push(...units)
+
+    return this
   }
 
   public addWall(wall: GameWall) {
@@ -55,13 +56,15 @@ export class GameMap extends GameTail {
     this.walls.push(wall)
   }
 
-  public draw(ctx: GameContext) {
-    this.drawChild(ctx)
+  public draw() {
+    if (this.ctx.resources.loaded === this.ctx.resources.total) {
+      this.drawChild()
+    }
   }
 
-  protected drawChild(ctx: GameContext) {
-    this.floors.forEach(tail => tail.draw(ctx))
-    this.units.forEach(tail => tail.draw(ctx))
-    this.walls.forEach(tail => tail.draw(ctx))
+  protected drawChild() {
+    this.floors.forEach(tail => tail.draw())
+    this.units.forEach(tail => tail.draw())
+    this.walls.forEach(tail => tail.draw())
   }
 }

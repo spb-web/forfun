@@ -173,87 +173,62 @@ var Box = class {
     this.max.setY(this.min.y + height);
     return this;
   }
+  checkCollided(box) {
+    const isCollided = !// x
+    (this.max.x < box.min.x || this.min.x > box.max.x || (this.max.y < box.min.y || this.min.y > box.max.y));
+    return isCollided;
+  }
   get center() {
     return ReadonlyVec2.fromVec2(
       this.max.clone().subtract(this.min).divideByScalar(2).add(this.min)
     );
   }
+  static from(entity) {
+    const box = new Box();
+    box.setHeight(entity.height).setWidth(entity.width).setX(entity.x).setY(entity.y);
+    return box;
+  }
 };
 
-// src/engine/GameTail.ts
-var GameTail = class extends Box {
-  fill = void 0;
-  image = void 0;
-  isFixedPosition = false;
-  ctx;
-  parent = null;
-  child = [];
-  setContext(ctx) {
-    this.ctx = ctx;
+// src/engine/resources/GameResource.ts
+var GameResource = class {
+  resource;
+  data = null;
+  id;
+  isLoaded = false;
+  constructor(id, resource) {
+    this.id = id;
+    this.resource = resource;
   }
-  setParent(tail) {
-    this.parent = tail;
-  }
-  addChild(...child) {
-    child.forEach((tail) => tail.setParent(this));
-    return this.child.push(...child);
-  }
-  update(ctx) {
-    this.child.forEach((tail) => tail.update(ctx));
-  }
-  draw(ctx, parentX = 0, parentY = 0) {
-    if (!ctx.camera.isVisible(this)) {
+  async load() {
+    if (this.isLoaded) {
       return;
     }
-    let x = this.x + parentX;
-    let y = this.y + parentY;
-    if (!this.isFixedPosition) {
-      x -= ctx.camera.x;
-      y -= ctx.camera.y;
-    }
-    ctx.canvas.drawRectangle({
-      x,
-      y,
-      width: this.width,
-      height: this.height,
-      fill: this.fill,
-      image: this.image
-    });
-    this.drawChild(ctx, this.x, this.y);
+    this.data = await this.loadResource();
+    this.isLoaded = true;
   }
-  drawChild(ctx, x, y) {
-    this.child.forEach((tail) => {
-      tail.draw(ctx, x, y);
-    });
+  loadResource() {
+    return Promise.resolve(this.data);
   }
 };
 
-// src/engine/GameCamera.ts
-var GameCamera = class extends GameTail {
-  isFixedPosition = false;
-  effectCtx;
-  constructor() {
-    super();
-    this.image = new OffscreenCanvas(256, 256);
-    this.effectCtx = this.image.getContext("2d");
-  }
-  update(ctx) {
-    const { width, height } = ctx.canvas.getScreenSize();
-    this.setWidth(width).setHeight(height);
-    const idata = this.effectCtx.createImageData(width, height);
-    const buffer32 = new Uint32Array(idata.data.buffer);
-    for (let i = 0; i < buffer32.length; i++) {
-      buffer32[i] = (255 * Math.random() | 0) << 24 & 1099780128868;
-    }
-    this.effectCtx.putImageData(idata, 0, 0);
-    const gradient = this.effectCtx.createRadialGradient(256 / 2, 256 / 2, 256 / 4, 256 / 2, 256 / 2, 256);
-    gradient.addColorStop(0, "transparent");
-    gradient.addColorStop(1, "black");
-    this.effectCtx.fillStyle = gradient;
-    this.effectCtx.fillRect(0, 0, width, height);
-  }
-  isVisible(tail) {
-    return !(tail.x + tail.width < this.x || tail.x > this.x + this.width || tail.y + tail.height < this.y || tail.y > this.y + this.height);
+// src/engine/resources/GameResourceImage.ts
+var GameResourceImage = class extends GameResource {
+  loadResource() {
+    return new Promise((resolve, reject) => {
+      const image = document.createElement("img");
+      const handleLoaded = () => {
+        image.removeEventListener("load", handleLoaded);
+        resolve(image);
+      };
+      const handleError = (error) => {
+        image.removeEventListener("error", handleError);
+        reject(error);
+      };
+      image.addEventListener("load", handleLoaded);
+      image.addEventListener("error", handleError);
+      image.src = this.resource;
+    });
   }
 };
 
@@ -316,7 +291,13 @@ var GameCanvas2d = class extends Box {
       this.ctx2d.fillRect(x, y, width, height);
     }
     if (image) {
-      this.ctx2d.drawImage(image, x, y, width, height);
+      if (image instanceof GameResourceImage) {
+        if (image.data) {
+          this.ctx2d.drawImage(image.data, x, y, width, height);
+        }
+      } else {
+        this.ctx2d.drawImage(image, x, y, width, height);
+      }
     }
   }
   fill(fill) {
@@ -363,43 +344,92 @@ var GameKeyboard = class {
   };
 };
 
+// src/engine/resources/GameResources.ts
+var GameResources = class {
+  images = /* @__PURE__ */ new Map();
+  loaded = 0;
+  total = 0;
+  add(id, resource) {
+    if (this.images.has(id)) {
+      return;
+    } else {
+      this.images.set(id, new GameResourceImage(id, resource));
+      this.total += 1;
+    }
+  }
+  load() {
+    const promises = [];
+    this.images.forEach((resource) => {
+      promises.push(
+        resource.load().then(() => {
+          this.loaded += 1;
+        })
+      );
+    });
+    return Promise.all(promises);
+  }
+};
+
 // src/engine/GameContext.ts
 var GameContext = class {
+  loop;
   keyboard = new GameKeyboard();
   canvas = new GameCanvas2d();
-  camera = new GameCamera();
+  resources = new GameResources();
+  gameCamera;
   colliders = [];
   frame = {
     time: Date.now(),
     duration: 0
   };
+  get camera() {
+    if (!this.gameCamera) {
+      throw new Error();
+    }
+    return this.gameCamera;
+  }
   get time() {
     return this.frame.time;
   }
   get frameDuration() {
     return this.frame.duration;
   }
+  constructor(loop) {
+    this.loop = loop;
+  }
   onFrame() {
     const time = Date.now();
     this.frame.duration = time - this.frame.time;
     this.frame.time = time;
   }
+  setCamera(camera) {
+    this.gameCamera = camera;
+  }
 };
 
 // src/engine/GameLoop.ts
 var GameLoop = class {
-  ctx = new GameContext();
+  ctx;
   onFrameHandler = () => {
   };
   isStarted = false;
   tails = [];
+  constructor() {
+    this.ctx = new GameContext(this);
+  }
+  setCamera(camera) {
+    this.bindCtx(camera).ctx.setCamera(camera);
+    return this;
+  }
   addTiles(...tails) {
     tails.forEach((tail) => this.bindCtx(tail));
-    return this.tails.push(...tails);
+    this.tails.push(...tails);
+    return this;
   }
   bindCtx(tail) {
     tail.setContext(this.ctx);
     tail.child.forEach((children) => this.bindCtx(children));
+    return this;
   }
   start() {
     if (this.isStarted) {
@@ -409,6 +439,7 @@ var GameLoop = class {
     requestAnimationFrame(() => {
       this.onFrame();
     });
+    return this;
   }
   onFrame() {
     this.ctx.onFrame();
@@ -428,9 +459,61 @@ var GameLoop = class {
   draw() {
     this.ctx.canvas.clear();
     this.tails.forEach((tail) => {
-      tail.draw(this.ctx);
+      tail.draw();
     });
-    this.ctx.camera.draw(this.ctx);
+    this.ctx.camera.draw();
+  }
+};
+
+// src/engine/GameTail.ts
+var GameTail = class extends Box {
+  fill = void 0;
+  image = void 0;
+  isFixedPosition = false;
+  ctx;
+  parent = null;
+  child = [];
+  init() {
+  }
+  setContext(ctx) {
+    this.ctx = ctx;
+    this.init();
+  }
+  setParent(tail) {
+    this.parent = tail;
+  }
+  addChild(...child) {
+    child.forEach((tail) => tail.setParent(this));
+    return this.child.push(...child);
+  }
+  update(ctx) {
+    this.child.forEach((tail) => tail.update(ctx));
+  }
+  draw(parentX = 0, parentY = 0) {
+    const { ctx } = this;
+    if (!ctx.camera.checkCollided(Box.from(this).setX(this.x + parentX).setY(this.y + parentY))) {
+      return;
+    }
+    let x = this.x + parentX;
+    let y = this.y + parentY;
+    if (!this.isFixedPosition) {
+      x -= ctx.camera.x;
+      y -= ctx.camera.y;
+    }
+    ctx.canvas.drawRectangle({
+      x,
+      y,
+      width: this.width,
+      height: this.height,
+      fill: this.fill,
+      image: this.image
+    });
+    this.drawChild(this.x, this.y);
+  }
+  drawChild(x, y) {
+    this.child.forEach((tail) => {
+      tail.draw(x, y);
+    });
   }
 };
 
@@ -443,7 +526,7 @@ var GameCollider = class extends GameTail {
   velocity = Vec2.create();
   collisionVelocity = Vec2.create();
   setContext(ctx) {
-    this.ctx = ctx;
+    super.setContext(ctx);
     ctx.colliders.push(this);
   }
   // /**
@@ -501,11 +584,6 @@ var GameWall = class extends GameCollider {
 
 // src/engine/gameObject/GameFloor.ts
 var GameFloor = class extends GameTail {
-  image = document.createElement("img");
-  constructor() {
-    super();
-    this.image.src = "./floor.jpg";
-  }
 };
 
 // src/engine/GameMap.ts
@@ -534,52 +612,40 @@ var GameMap = class extends GameTail {
     });
     this.setWidth(maxX * this.gridSize).setHeight(maxY * this.gridSize);
   }
-  addUnit(unit) {
-    this.addChild(unit);
-    this.units.push(unit);
+  addUnits(...units) {
+    this.addChild(...units);
+    this.units.push(...units);
+    return this;
   }
   addWall(wall) {
     this.addChild(wall);
     this.walls.push(wall);
   }
-  draw(ctx) {
-    this.drawChild(ctx);
+  draw() {
+    if (this.ctx.resources.loaded === this.ctx.resources.total) {
+      this.drawChild();
+    }
   }
-  drawChild(ctx) {
-    this.floors.forEach((tail) => tail.draw(ctx));
-    this.units.forEach((tail) => tail.draw(ctx));
-    this.walls.forEach((tail) => tail.draw(ctx));
+  drawChild() {
+    this.floors.forEach((tail) => tail.draw());
+    this.units.forEach((tail) => tail.draw());
+    this.walls.forEach((tail) => tail.draw());
   }
 };
 
-// src/engine/gameObject/GameUnit.ts
-var GameUnit = class extends GameCollider {
-};
-
-// src/engine/gameObject/GamePlayer.ts
-var GamePlayer = class extends GameUnit {
-  image = document.createElement("img");
-  playerState = 0 /* idle */;
-  constructor() {
-    super();
-    this.image.src = "./sprite0.png";
-    this.setWidth(50).setHeight(50);
-  }
-  update(ctx) {
-    const speedPerSecond = 400;
-    this.velocity = Vec2.fromReadonlyVec2(ctx.keyboard.vector).normalize(speedPerSecond);
-    this.fill = { style: `hsl(300, 100%, 31%)` };
-    this.updatePosition();
-    console.log(this.center.x);
+// src/game/Floor.ts
+var Floor = class extends GameFloor {
+  init() {
+    this.ctx.resources.add("floor", "./floor.jpg");
+    this.image = this.ctx.resources.images.get("floor");
   }
 };
 
 // src/game/Wall.ts
 var Wall = class extends GameWall {
-  image = document.createElement("img");
-  constructor() {
-    super();
-    this.image.src = "./wall.jpg";
+  init() {
+    this.ctx.resources.add("wall", "./wall.jpg");
+    this.image = this.ctx.resources.images.get("wall");
   }
 };
 
@@ -611,15 +677,21 @@ var BgTail = class extends GameTail {
 
 // src/game/Car.ts
 var Car = class extends GameWall {
+  car = new GameTail();
   constructor() {
     super();
-    const car2 = new GameTail();
-    car2.image = document.createElement("img");
-    car2.image.src = "./car.png";
     this.setWidth(95).setHeight(230).addChild(
-      car2.setWidth(135).setHeight(230).setX(-20)
+      this.car.setWidth(135).setHeight(230).setX(-20)
     );
   }
+  init() {
+    this.ctx.resources.add("car", "./car.png");
+    this.car.image = this.ctx.resources.images.get("car");
+  }
+};
+
+// src/engine/gameObject/GameUnit.ts
+var GameUnit = class extends GameCollider {
 };
 
 // src/game/DemoBot.ts
@@ -631,15 +703,19 @@ function assert(v) {
 var DemoBot = class extends GameUnit {
   velocity = Vec2.create(Math.random() * 1600 - 800, Math.random() * 1600 - 800);
   fill = void 0;
-  image = document.createElement("img");
   constructor() {
     super();
-    this.image.src = "./sprite0.png";
     this.setWidth(50).setHeight(50);
+  }
+  init() {
+    this.ctx.resources.add("bot-character-0", "./sprite0.png");
+    this.ctx.resources.add("bot-character-1", "./sprite1.png");
+    this.ctx.resources.add("bot-character-2", "./sprite2.png");
+    this.image = this.ctx.resources.images.get("player-character");
   }
   update(ctx) {
     const { parent } = this;
-    this.image.src = `./sprite${Math.ceil(ctx.time / 1e3) % 3}.png`;
+    this.image = this.ctx.resources.images.get(`bot-character-${Math.ceil(ctx.time / 1e3) % 3}`);
     assert(parent);
     this.updatePosition();
     if (this.collided) {
@@ -648,42 +724,147 @@ var DemoBot = class extends GameUnit {
   }
 };
 
+// src/engine/GameCamera.ts
+var GameCamera = class extends GameTail {
+  isFixedPosition = false;
+  effectCtx;
+  constructor() {
+    super();
+    this.image = new OffscreenCanvas(256, 256);
+    this.effectCtx = this.image.getContext("2d");
+  }
+  update(ctx) {
+    const { width, height } = ctx.canvas.getScreenSize();
+    this.setWidth(width).setHeight(height);
+    const idata = this.effectCtx.createImageData(width, height);
+    const buffer32 = new Uint32Array(idata.data.buffer);
+    for (let i = 0; i < buffer32.length; i++) {
+      buffer32[i] = (255 * Math.random() | 0) << 24 & 1099780128868;
+    }
+    this.effectCtx.putImageData(idata, 0, 0);
+    const gradient = this.effectCtx.createRadialGradient(256 / 2, 256 / 2, 256 / 4, 256 / 2, 256 / 2, 256);
+    gradient.addColorStop(0, "transparent");
+    gradient.addColorStop(1, "black");
+    this.effectCtx.fillStyle = gradient;
+    this.effectCtx.fillRect(0, 0, width, height);
+  }
+  static create() {
+    return new GameCamera();
+  }
+};
+
+// src/engine/gameObject/GamePlayer.ts
+var GamePlayer = class extends GameUnit {
+  playerState = 0 /* idle */;
+  constructor() {
+    super();
+    this.setWidth(50).setHeight(50);
+  }
+  update(ctx) {
+    const speedPerSecond = 400;
+    this.velocity = Vec2.fromReadonlyVec2(ctx.keyboard.vector).normalize(speedPerSecond);
+    this.updatePosition();
+  }
+};
+
+// src/game/Player.ts
+var Player = class extends GamePlayer {
+  /** Тайл с эффектом свечения */
+  glow = new GameTail();
+  /** Тайл с текстурой игрока */
+  character = new GameTail();
+  init() {
+    this.ctx.resources.add("player-character", "./sprite0.png");
+    this.character.image = this.ctx.resources.images.get("player-character");
+    this.addChild(
+      this.glow.setWidth(450).setHeight(450).setX(-225).setY(-225),
+      this.character.setWidth(50).setHeight(50).setX(0).setY(0)
+    );
+  }
+  update(ctx) {
+    super.update(ctx);
+    const glowGradient = ctx.canvas.ctx2d.createRadialGradient(
+      this.center.x - ctx.camera.x,
+      this.center.y - ctx.camera.y,
+      0,
+      this.center.x - ctx.camera.x,
+      this.center.y - ctx.camera.y,
+      200
+    );
+    glowGradient.addColorStop(0, "rgba(255, 255, 255, 0.4)");
+    glowGradient.addColorStop(1, "transparent");
+    this.glow.fill = {
+      style: glowGradient
+    };
+  }
+};
+
+// src/game/LoadScreen.ts
+var LoadScreen = class extends GameTail {
+  progress = 0;
+  distract = 0;
+  init() {
+    this.setHeight(50);
+  }
+  update() {
+    const progress = this.ctx.resources.loaded / this.ctx.resources.total;
+    if (progress === 1) {
+      this.fill = void 0;
+      return;
+    }
+    const maxWidth = this.ctx.canvas.width;
+    const minHeight = 50;
+    const width = maxWidth * progress;
+    if (progress !== this.progress) {
+      this.distract = 1;
+    }
+    this.distract = Math.max(0, this.distract - this.ctx.frameDuration / 1e3 * 3);
+    this.fill = {
+      style: `rgb(255, ${255 - this.distract * 255}, ${255 - this.distract * 255})`
+    };
+    const height = minHeight + 15 * this.distract;
+    this.progress = progress;
+    this.setWidth(width).setHeight(height).setX((this.ctx.canvas.width - width) / 2 + this.ctx.camera.x).setY((this.ctx.camera.height - height) / 2 + this.ctx.camera.y);
+  }
+};
+
 // src/index.ts
 var gameLoop = new GameLoop();
+var loadScreen = new LoadScreen();
 var bgTail = new BgTail();
 var map = new GameMap([
   [new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new Wall(), new Wall(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Wall(), new Floor(), new Floor(), new Floor(), new Wall(), new Wall(), new Wall(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
   [new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall()]
 ]);
 var demoBot = new DemoBot();
@@ -692,24 +873,29 @@ var demoBot3 = new DemoBot();
 var demoBot4 = new DemoBot();
 var demoBot5 = new DemoBot();
 var demoBot6 = new DemoBot();
-var player = new GamePlayer();
+var player = new Player();
 var car = new Car();
-map.addUnit(demoBot.setX(100).setY(100));
-map.addUnit(demoBot2.setX(100).setY(100));
-map.addUnit(demoBot3.setX(100).setY(100));
-map.addUnit(demoBot4.setX(100).setY(100));
-map.addUnit(demoBot5.setX(100).setY(100));
-map.addUnit(demoBot6.setX(100).setY(100));
-map.addUnit(player.setX(100).setY(80));
-map.addWall(car.setX(650).setY(80));
-gameLoop.addTiles(bgTail, map);
-gameLoop.onFrameHandler = (ctx) => {
+gameLoop.addTiles(
+  bgTail,
+  map.addUnits(
+    demoBot.setX(100).setY(100),
+    demoBot2.setX(100).setY(100),
+    demoBot3.setX(100).setY(100),
+    demoBot4.setX(100).setY(100),
+    demoBot5.setX(100).setY(100),
+    demoBot6.setX(100).setY(100),
+    player.setX(100).setY(80),
+    car.setX(650).setY(80)
+  ),
+  loadScreen
+).setCamera(GameCamera.create()).onFrameHandler = (ctx) => {
   const cameraPosition = Vec2.create(
     Math.sin(ctx.time / 1e3) * 10,
     Math.cos(ctx.time / 1e3) * 10
   ).add(player.center).subtract(ctx.canvas.center);
   ctx.camera.setX(cameraPosition.x).setY(cameraPosition.y);
 };
+gameLoop.start();
 var canvasEl = gameLoop.ctx.canvas.getElement();
 document.body.appendChild(canvasEl);
 var resizeObserver = new ResizeObserver(([{ contentRect: { width, height } }]) => {
@@ -721,4 +907,6 @@ canvasEl.style.left = "0";
 canvasEl.style.top = "0";
 canvasEl.style.width = "100%";
 canvasEl.style.height = "100%";
-gameLoop.start();
+gameLoop.ctx.resources.load().then(() => {
+  console.log("\u0440\u0435\u0441\u0443\u0440\u0441\u044B \u0437\u0430\u0433\u0440\u0443\u0436\u0435\u043D\u044B");
+}).catch(console.error);

@@ -13,22 +13,28 @@ export class DemoBot extends GameUnit {
 
   fill = undefined
 
-  image = document.createElement('img')
 
   constructor() {
     super()
-    this.image.src = './sprite0.png'
 
     this
       .setWidth(50)
       .setHeight(50)
+  }
+
+  init() {
+    this.ctx.resources.add('bot-character-0', './sprite0.png')
+    this.ctx.resources.add('bot-character-1', './sprite1.png')
+    this.ctx.resources.add('bot-character-2', './sprite2.png')
+
+    this.image = this.ctx.resources.images.get('player-character')
   }
     
   update(ctx: GameContext): void {
     const {parent} = this
 
     // смена спрайта каждую секунду реального времени, не зависит от тормазов отрисовки (fps)
-    this.image.src = `./sprite${Math.ceil(ctx.time / 1000) % 3}.png`
+    this.image = this.ctx.resources.images.get(`bot-character-${Math.ceil(ctx.time / 1000) % 3}`)
 
     assert(parent)
 

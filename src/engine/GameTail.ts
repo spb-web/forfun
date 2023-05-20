@@ -1,9 +1,10 @@
 import type { GameContext } from "./GameContext";
 import { Box } from "./Box";
+import { GameResourceImage } from "./resources/GameResourceImage";
 
 export class GameTail extends Box {
-  fill: {style: any} | undefined = undefined
-  image?: CanvasImageSource | undefined = undefined
+  fill?: {style: any} | undefined = undefined
+  image?: CanvasImageSource | GameResourceImage | undefined = undefined
   isFixedPosition = false
   ctx!: GameContext
   
@@ -11,8 +12,11 @@ export class GameTail extends Box {
   
   public child: GameTail[] = []
 
-  public setContext(ctx: GameContext) {
+  public init(): void {}
+
+  public setContext(ctx: GameContext): void {
     this.ctx = ctx
+    this.init()
   }
   
   public setParent(tail: GameTail) {
@@ -29,8 +33,10 @@ export class GameTail extends Box {
     this.child.forEach(tail => tail.update(ctx))
   }
 
-  public draw(ctx: GameContext, parentX: number = 0, parentY: number = 0) {
-    if (!ctx.camera.isVisible(this)) {
+  public draw(parentX: number = 0, parentY: number = 0) {
+    const {ctx} = this
+
+    if (!ctx.camera.checkCollided(Box.from(this).setX(this.x + parentX).setY(this.y + parentY))) {
       return
     }
 
@@ -51,12 +57,12 @@ export class GameTail extends Box {
       image: this.image,
     })
 
-    this.drawChild(ctx, this.x, this.y)
+    this.drawChild(this.x, this.y)
   }
 
-  protected drawChild(ctx: GameContext, x: number, y: number) {
+  protected drawChild(x: number, y: number) {
     this.child.forEach(tail => {
-      tail.draw(ctx, x, y)
+      tail.draw(x, y)
     })
   }
 }

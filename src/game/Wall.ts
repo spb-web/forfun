@@ -1,11 +1,8 @@
 import { GameWall } from "../engine/gameObject/GameWall";
 
 export class Wall extends GameWall {
-  image = document.createElement('img')
-
-  constructor() {
-    super()
-
-    this.image.src = './wall.jpg'
+  init() {
+    this.ctx.resources.add('wall', './wall.jpg')
+    this.image = this.ctx.resources.images.get('wall')
   }
 }

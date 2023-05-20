@@ -45,8 +45,7 @@ export class GameCamera extends GameTail {
     this.effectCtx.fillRect(0, 0, width, height)
   }
 
-  isVisible(tail: GameTail): boolean {
-    return !(tail.x + tail.width < this.x || tail.x > this.x + this.width
-    || tail.y + tail.height < this.y|| tail.y > this.y + this.height)
+  static create() {
+    return new GameCamera()
   }
 }

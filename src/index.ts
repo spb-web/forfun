@@ -1,15 +1,19 @@
 import { GameLoop } from "./engine/GameLoop";
 import { GameMap } from "./engine/GameMap";
-import { GameFloor } from "./engine/gameObject/GameFloor";
-import { GamePlayer } from "./engine/gameObject/GamePlayer";
+import { Floor } from "./game/Floor";
 import { Wall } from "./game/Wall";
 import { Vec2 } from "./engine/vector/Vec2";
 import { BgTail } from "./game/BgTail";
 import { Car } from "./game/Car";
 import { DemoBot } from "./game/DemoBot";
+import { GameCamera } from "./engine/GameCamera";
+import { Player } from "./game/Player";
+import { LoadScreen } from "./game/LoadScreen";
 
 // самый главный объект на котором все держится
 const gameLoop = new GameLoop()
+
+const loadScreen = new LoadScreen()
 
 // фон, цветной прямоугольник
 const bgTail = new BgTail()
@@ -17,37 +21,37 @@ const bgTail = new BgTail()
 // карта
 const map = new GameMap([
   [new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new Wall(),new Wall(),new Wall(),new Wall(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new Wall(), new Wall(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
-  [new Wall(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(),new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new GameFloor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Wall(),new Wall(),new Wall(),new Wall(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Wall(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Wall(), new Floor(), new Floor(), new Floor(), new Wall(), new Wall(), new Wall(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
   [new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall()],
 ])
 
@@ -64,36 +68,48 @@ const demoBot5 = new DemoBot()
 // типо бот6
 const demoBot6 = new DemoBot()
 // типо игрок
-const player = new GamePlayer()
+const player = new Player()
 // типо тачка
 const car = new Car()
 
-map.addUnit(demoBot.setX(100).setY(100))
-map.addUnit(demoBot2.setX(100).setY(100))
-map.addUnit(demoBot3.setX(100).setY(100))
-map.addUnit(demoBot4.setX(100).setY(100))
-map.addUnit(demoBot5.setX(100).setY(100))
-map.addUnit(demoBot6.setX(100).setY(100))
-map.addUnit(player.setX(100).setY(80))
-map.addWall(car.setX(650).setY(80))
-
 // добавляем bgTail в цикл отрисовки
-gameLoop.addTiles(bgTail, map)
+gameLoop
+  .addTiles(
+    bgTail,
+    map.addUnits(
+      demoBot.setX(100).setY(100),
+      demoBot2.setX(100).setY(100),
+      demoBot3.setX(100).setY(100),
+      demoBot4.setX(100).setY(100),
+      demoBot5.setX(100).setY(100),
+      demoBot6.setX(100).setY(100),
+      player.setX(100).setY(80),
+      car.setX(650).setY(80),
+    ),
+    loadScreen,
+  )
+  .setCamera(GameCamera.create())
+  .onFrameHandler = (ctx) => {
+    // каждый фрейм двигаем камеру
+    const cameraPosition = Vec2
+      .create(
+        Math.sin(ctx.time / 1000) * 10,
+        Math.cos(ctx.time / 1000) * 10,
+      )
+      .add(player.center)
+      .subtract(ctx.canvas.center)
 
-gameLoop.onFrameHandler = (ctx) => {
-  // каждый фрейм двигаем камеру
-  const cameraPosition = Vec2
-    .create(
-      Math.sin(ctx.time / 1000) * 10,
-      Math.cos(ctx.time / 1000) * 10,
-    )
-    .add(player.center)
-    .subtract(ctx.canvas.center)
+    ctx.camera
+      .setX(cameraPosition.x)
+      .setY(cameraPosition.y)
+  }
 
-  ctx.camera
-    .setX(cameraPosition.x)
-    .setY(cameraPosition.y)
-}
+
+// запускаем отрисовку
+gameLoop.start()
+
+
+// дальше чисто фронтовая хрень
 
 // добавляем canvas на страницу
 const canvasEl = gameLoop.ctx.canvas.getElement()
@@ -114,5 +130,9 @@ canvasEl.style.top = '0'
 canvasEl.style.width = '100%'
 canvasEl.style.height = '100%'
 
-// запускаем отрисовку
-gameLoop.start()
+
+
+
+gameLoop.ctx.resources.load().then(() => {
+  console.log('ресурсы загружены')
+}).catch(console.error)

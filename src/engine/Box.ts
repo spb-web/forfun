@@ -64,6 +64,17 @@ export class Box {
     return this
   }
 
+  public checkCollided(box: Box): boolean {
+    const isCollided = !(
+      // x
+      (this.max.x < box.min.x || this.min.x > box.max.x)
+      // y
+      || (this.max.y < box.min.y || this.min.y > box.max.y)
+    )
+
+    return isCollided
+  }
+
   public get center(): ReadonlyVec2 {
     return ReadonlyVec2.fromVec2(
       this.max
@@ -72,5 +83,17 @@ export class Box {
         .divideByScalar(2)
         .add(this.min)
     )
+  }
+
+  static from(entity: Box) {
+    const box = new Box()
+
+    box
+      .setHeight(entity.height)
+      .setWidth(entity.width)
+      .setX(entity.x)
+      .setY(entity.y)
+
+    return box
   }
 }

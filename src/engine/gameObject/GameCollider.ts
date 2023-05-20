@@ -12,7 +12,7 @@ export class GameCollider extends GameTail {
   public collisionVelocity = Vec2.create()
 
   public setContext(ctx: GameContext): void {
-    this.ctx = ctx
+    super.setContext(ctx)
 
     ctx.colliders.push(this)
   }
