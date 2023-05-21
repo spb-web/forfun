@@ -70,4 +70,8 @@ export class GameTail extends Box {
       tail.draw(x, y)
     })
   }
+
+  static create(): GameTail {
+    return new GameTail()
+  }
 }

@@ -10,15 +10,12 @@ function assert<T>(v: T): asserts v is NonNullable<T> {
 export class DemoBot extends GameUnit {
   public velocity: Vec2 = Vec2.create(Math.random() * 1600 - 800, Math.random() * 1600 - 800)
 
-  fill = undefined
-
-
   constructor() {
     super()
 
     this
-      .setWidth(50)
-      .setHeight(50)
+      .setWidth(32)
+      .setHeight(32)
   }
 
   init() {

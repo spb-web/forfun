@@ -8,6 +8,7 @@ import { GameCamera } from "../../engine/GameCamera";
 import { Player } from "../Player";
 import { GameScene } from "../../engine/GameScene";
 import { Vec2 } from "../../engine/vector/Vec2";
+import { Door } from "../Door";
 
 // игровая сцена
 export const firstLevel = new GameScene('first-level')
@@ -18,7 +19,7 @@ const bgTail = new BgTail()
 // карта
 const map = new GameMap([
   [new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall(),new Wall()],
-  [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
+  [new Wall(),new Door('second-level'),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
   [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
   [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
   [new Wall(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(),new Floor(), new Floor(), new Floor(), new Floor(), new Wall(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Floor(), new Wall()],
@@ -83,6 +84,8 @@ firstLevel.addTiles(
       car.setX(650).setY(80),
     ),
   )
+
+firstLevel.setPayer(player)
 
 // Добавляем камеру сцены
 firstLevel.setCamera(GameCamera.create())

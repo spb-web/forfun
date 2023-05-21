@@ -1,6 +1,8 @@
+import { cityParallaxScene } from "./demo/scenes/cityParallaxScene/cityParallaxScene";
 import { GameLoop } from "./engine/GameLoop";
 import { firstLevel } from "./game/sceens/firstLevel";
 import { loadScreen } from "./game/sceens/loadScreen";
+import { secondLevel } from "./game/sceens/secondLevel";
 
 // самый главный объект на котором все держится
 const gameLoop = new GameLoop()
@@ -8,7 +10,7 @@ const gameLoop = new GameLoop()
 gameLoop.onFrameHandler = () => {}
 
 // добавляем сцену в игру
-gameLoop.addScenes(firstLevel, loadScreen)
+gameLoop.addScenes(firstLevel, secondLevel, loadScreen, cityParallaxScene)
 // указываем активную сцену
 gameLoop.setActiveScenes('load-screen')
 // запускаем отрисовку
@@ -18,7 +20,11 @@ gameLoop.start()
 gameLoop.ctx.resources.load().then(() => {
   console.log('ресурсы загружены')
   // меняем активную сцену
-  gameLoop.setActiveScenes('first-level')
+  gameLoop.setActiveScenes('demo-city-parallax-screen')
+
+  setTimeout(() => {
+    gameLoop.setActiveScenes('first-level')
+  }, 3000)
 }).catch(console.error)
 
 
@@ -45,8 +51,8 @@ document.body.appendChild(canvasEl)
 // ресайзим canvas
 const resizeObserver = new ResizeObserver(([{contentRect: {width, height}}]) => {
   gameLoop.ctx.canvas
-    .setWidth(width)
-    .setHeight(height)
+    .setWidth(width / 2)
+    .setHeight(height / 2)
 })
 
 resizeObserver.observe(canvasEl)
@@ -56,3 +62,4 @@ canvasEl.style.left = '0'
 canvasEl.style.top = '0'
 canvasEl.style.width = '100%'
 canvasEl.style.height = '100%'
+canvasEl.style.imageRendering = 'pixelated'

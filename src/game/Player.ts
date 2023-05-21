@@ -20,9 +20,11 @@ export class Player extends GamePlayer {
 
     // добавляем тайл со свечением и текстурой игрока как дочерние элементы игрока
     this.addChild(
-      this.glow.setWidth(450).setHeight(450).setX(-225).setY(-225),
-      this.character.setWidth(50).setHeight(50).setX(0).setY(0)
+      this.glow.setWidth(432).setHeight(432).setX(-216).setY(-216),
+      this.character.setWidth(32).setHeight(32).setX(0).setY(0)
     )
+
+    this.setWidth(32).setHeight(32)
   }
 
   public update(): void {

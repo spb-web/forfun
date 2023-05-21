@@ -13,13 +13,6 @@ export class ProgressBarTail extends GameTail {
   public update(): void {
     const {scene: {camera, ctx}} = this
     const progress = ctx.resources.loaded / ctx.resources.total
-
-    if (progress === 1) {
-      this.fill = undefined
-
-      return
-    }
-
     const maxWidth = ctx.canvas.width
     const minHeight = 50
     const width = maxWidth * progress

@@ -85,15 +85,16 @@ export class Box {
     )
   }
 
-  static from(entity: Box) {
-    const box = new Box()
+  static create() {
+    return new Box()
+  }
 
-    box
+  static from(entity: Box) {
+    return Box
+      .create()
       .setHeight(entity.height)
       .setWidth(entity.width)
       .setX(entity.x)
       .setY(entity.y)
-
-    return box
   }
 }

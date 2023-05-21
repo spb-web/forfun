@@ -2,6 +2,7 @@ import { GameCamera } from "./GameCamera"
 import { type GameContext } from "./GameContext"
 import { GameTail } from "./GameTail"
 import { GameCollider } from "./gameObject/GameCollider"
+import { GamePlayer } from "./gameObject/GamePlayer"
 
 export class GameScene {
   public readonly id: string
@@ -9,6 +10,7 @@ export class GameScene {
   public camera!: GameCamera
   public readonly colliders: GameCollider[] = []
   public onFrameHandler: (ctx: GameContext) => void = () => {}
+  player?: GamePlayer
 
   private tails: GameTail[] = []
 
@@ -18,20 +20,24 @@ export class GameScene {
 
   public setContext(ctx: GameContext) {
     this.ctx = ctx
-    this.tails.forEach(tail => this.bindCtx(tail))
-    this.bindCtx(this.camera)
+    this.tails.forEach(tail => this.bindScene(tail))
+    this.bindScene(this.camera)
 
     console.log(this.tails)
   }
 
   public setCamera(camera: GameCamera): void {
-    this.bindCtx(camera)
+    this.bindScene(camera)
     this.camera = camera
   }
 
   public addTiles(...tails: GameTail[]): void {
-    tails.forEach(tail => this.bindCtx(tail))
+    tails.forEach(tail => this.bindScene(tail))
     this.tails.push(...tails)
+  }
+
+  public setPayer(player: GamePlayer): void {
+    this.player = player
   }
 
   public onFrame() {    
@@ -47,10 +53,10 @@ export class GameScene {
     this.camera.draw()
   }
 
-  private bindCtx(tail: GameTail): void {
+  private bindScene(tail: GameTail): void {
     if (this.ctx) {
       tail.setScene(this)
-      tail.child.forEach(children => this.bindCtx(children))
+      tail.child.forEach(children => this.bindScene(children))
     }
   }
 }
